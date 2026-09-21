@@ -1,0 +1,21 @@
+# Nuxt
+.nuxt
+.output
+.data
+.cache
+dist
+node_modules
+logs
+*.log
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Verification screenshots
+.verify/
+
+# OS / editor
+.DS_Store
+.idea

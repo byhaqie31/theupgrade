@@ -1,0 +1,213 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ─────────────────────────────────────────────
+   Tokens · "Golden hour, ground floor"
+   Warm cream page, deep ink type, amber accent.
+   Exact OKLCH conversions of the handoff hex.
+   Alpha variants (ink-70, ink-45, line, line-strong,
+   dark-band border/fill) use opacity modifiers:
+   text-ink/72, text-ink/50, border-ink/14, border-ink/32,
+   border-dark-cream/16, bg-dark-cream/5.
+   ───────────────────────────────────────────── */
+@theme {
+  --color-*: initial;
+  /* The design is set in px with one inherited line-height (1.65).
+     Tailwind canonicalises text-[14px] to text-sm at build time, and the
+     default scale pairs each size with its own line-height. Redefine the
+     scale in px with no paired line-heights so sizes inherit 1.65. */
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --color-paper:        oklch(95.6% 0.014 84.6);  /* #f5f0e6 page */
+  --color-paper-2:      oklch(92.6% 0.021 85.9);  /* #ede6d7 */
+  --color-paper-3:      oklch(89.3% 0.027 85.7);  /* #e4dbc8 */
+  --color-ink:          oklch(22.6% 0.019 77.6);  /* #211b12 text */
+  --color-amber:        oklch(61.7% 0.112 69.8);  /* #b0782f accent on light */
+  --color-amber-bright: oklch(73.9% 0.134 70.0);  /* #e09a3e accent on dark only */
+  --color-dark:         oklch(23.6% 0.021 76.3);  /* #241d13 dark bands */
+  --color-dark-cream:   oklch(95.4% 0.020 84.6);  /* #f6efe1 text on dark */
+  --color-card:         #ffffff;
+  --color-white:        #ffffff;
+  --color-transparent:  transparent;
+
+  --font-sans: "Satoshi", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 24px 60px -40px rgba(60, 40, 15, .35);
+  --shadow-card-hover: 0 20px 44px -30px rgba(60, 40, 15, .4);
+
+  --animate-marquee: marquee 46s linear infinite;
+
+  @keyframes marquee {
+    to { transform: translateX(-50%); }
+  }
+}
+
+/* Fluid sizes, rhythm and container. Kept out of @theme on purpose. */
+:root {
+  --gutter: clamp(16px, 4vw, 56px);
+  --max: 1280px;
+  --section-y: clamp(64px, 9vw, 128px);
+
+  --fs-h1: clamp(2.6rem, 6.8vw, 5.6rem);
+  --fs-h2: clamp(2rem, 4.6vw, 3.6rem);
+  --fs-interlude: clamp(2.8rem, 8.5vw, 7.2rem);
+  --fs-featured: clamp(1.9rem, 3.8vw, 3.2rem);
+  --fs-journey: clamp(2.3rem, 5.2vw, 4.4rem);
+  --fs-band: clamp(2.4rem, 5.6vw, 4.8rem);
+  --fs-about: clamp(2rem, 4.4vw, 3.4rem);
+  --fs-format: clamp(1.6rem, 2.4vw, 2.1rem);
+  --fs-count: clamp(2.6rem, 5.6vw, 4.2rem);
+  --fs-tagline: clamp(1.1rem, 2vw, 1.5rem);
+  --fs-lede: clamp(17px, 1.4vw, 20px);
+  --fs-quote: clamp(1.25rem, 2vw, 1.6rem);
+
+  --hero-inset: clamp(8px, 1.2vw, 16px);
+  --hero-min: clamp(620px, 94vh, 860px);
+  --pad-card: clamp(24px, 4vw, 48px);
+}
+
+@layer base {
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-amber);
+    color: #fff;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color .25s ease;
+  }
+  a:hover {
+    color: var(--color-amber);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+  h1 em, h2 em, h3 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--color-amber);
+  }
+}
+
+@layer components {
+  .wrap {
+    width: min(100% - 2 * var(--gutter), var(--max));
+    margin-inline: auto;
+  }
+
+  .section {
+    padding-block: var(--section-y);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-amber);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border: 1px solid var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-dark-cream);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    line-height: 1.65;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .25s ease, color .25s ease, border-color .25s ease;
+  }
+  .btn:hover {
+    background: var(--color-amber);
+    border-color: var(--color-amber);
+    color: #fff;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-ink);
+    border-color: color-mix(in oklab, var(--color-ink) 32%, transparent);
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-ink);
+    color: var(--color-ink);
+    background: transparent;
+  }
+  .btn .arrow {
+    transition: transform .3s ease;
+  }
+  .btn:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  .rule {
+    height: 1px;
+    background: color-mix(in oklab, var(--color-ink) 14%, transparent);
+  }
+
+  /* Fixed full-page grain. */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer components {
+  /* Mono caption on every photo placeholder. Position is overridable per use. */
+  .foto-tag {
+    position: absolute;
+    left: var(--tag-x, 14px);
+    bottom: var(--tag-y, 12px);
+    z-index: 1;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    line-height: 1.65;
+    color: color-mix(in oklab, var(--color-ink) 60%, transparent);
+    background: color-mix(in oklab, var(--color-paper) 75%, transparent);
+    padding: 4px 8px;
+    border-radius: 2px;
+    backdrop-filter: blur(4px);
+  }
+}

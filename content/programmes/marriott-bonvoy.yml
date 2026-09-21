@@ -1,0 +1,23 @@
+id: marriott-bonvoy
+name: Marriott Bonvoy
+kind: hotel
+qualifyingUnit: nights
+yearEnds: "12-31"
+effectiveFrom: "2026-01-01"
+tiers:
+  - id: silver
+    name: Silver
+    threshold: 10
+  - id: gold
+    name: Gold
+    threshold: 25
+  - id: platinum
+    name: Platinum
+    threshold: 50
+  - id: titanium
+    name: Titanium
+    threshold: 75
+  - id: ambassador
+    name: Ambassador
+    threshold: 100
+    note: Also requires annual qualifying spend. Amount to be confirmed by Qie.

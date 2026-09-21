@@ -1,0 +1,8 @@
+# TODO Qie: fill from programme T&C
+id: krisflyer
+name: KrisFlyer
+kind: airline
+qualifyingUnit: miles
+yearEnds: "12-31"
+effectiveFrom: "2026-01-01"
+tiers: []

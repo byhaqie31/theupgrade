@@ -1,0 +1,7 @@
+# pnpm 11 refuses to run dependency build scripts unless each is declared here.
+# better-sqlite3 needs its native binding (prebuilt download) for Nuxt Content at dev/build time.
+# esbuild and unrs-resolver only run optional binary checks; their platform packages already ship the binaries.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: false
+  unrs-resolver: false

@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turn Left · Status, strategy, and the stays worth the miles</title>
+<meta name="description" content="A fortnightly letter from Kuala Lumpur on elite status, loyalty strategy and the hotels and cabins that justify the chase.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+<style>
+  /* ─────────────────────────────────────────────
+     TOKENS  ·  concept: "Cabin at dusk"
+     Warm ink, champagne accent, cream type.
+     ───────────────────────────────────────────── */
+  :root {
+    --ink: #0e0d0b;          /* page background, warm near-black */
+    --ink-2: #16140f;        /* raised surfaces */
+    --ink-3: #201d16;        /* hover / inset */
+    --line: rgba(242, 236, 224, 0.12);
+    --line-strong: rgba(242, 236, 224, 0.28);
+    --cream: #f6efe1;        /* primary text */
+    --cream-70: rgba(246, 239, 225, 0.72);
+    --cream-45: rgba(246, 239, 225, 0.48);
+    --champagne: #f0b45c;    /* the one accent, brighter amber */
+    --champagne-deep: #c98f3c;
+    --dusk-1: #332240;       /* placeholder gradient stops, punchier */
+    --dusk-2: #8a3d4a;
+    --dusk-3: #ef8f4a;
+    --dusk-4: #ffd48f;
+
+    --display: "Fraunces", Georgia, serif;
+    --body: "Satoshi", system-ui, -apple-system, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --gutter: clamp(16px, 4vw, 56px);
+    --max: 1280px;
+    --radius: 4px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: auto; -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--ink);
+    color: var(--cream);
+    font-family: var(--body);
+    font-weight: 300;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--champagne); color: var(--ink); }
+  a { color: inherit; text-decoration: none; }
+  img, svg { display: block; max-width: 100%; }
+  button, input { font: inherit; color: inherit; }
+
+  /* grain overlay */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: 50; pointer-events: none;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .wrap { width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto; }
+  .hero .wrap > *, .journey .stage > *, .about .wrap > *, .band .wrap > *, .featured .top > *, .section-head > * { min-width: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--champagne);
+  }
+  .eyebrow.muted { color: var(--cream-45); }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 300; letter-spacing: -0.015em; line-height: 1.02; }
+  h1 em, h2 em, .serif-em { font-style: italic; font-weight: 300; color: var(--champagne); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 22px;
+    border: 1px solid var(--cream);
+    background: var(--cream); color: var(--ink);
+    font-family: var(--body); font-weight: 500; font-size: 14px; letter-spacing: 0.01em;
+    border-radius: var(--radius);
+    cursor: pointer; white-space: nowrap;
+    transition: background .25s ease, color .25s ease, border-color .25s ease;
+  }
+  .btn:hover { background: var(--champagne); border-color: var(--champagne); }
+  .btn.ghost { background: transparent; color: var(--cream); border-color: var(--line-strong); }
+  .btn.ghost:hover { border-color: var(--cream); background: transparent; }
+  .btn .arrow { transition: transform .3s ease; }
+  .btn:hover .arrow { transform: translateX(4px); }
+
+  /* ───────────── notice bar ───────────── */
+  .notice {
+    background: var(--champagne); color: var(--ink);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+    padding: 9px var(--gutter);
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    position: relative; z-index: 60;
+  }
+  .notice button { background: none; border: 0; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; opacity: .7; }
+  .notice button:hover { opacity: 1; }
+
+  /* ───────────── nav ───────────── */
+  .nav {
+    position: sticky; top: 0; z-index: 40;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: rgba(14, 13, 11, 0.72);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .wordmark { display: flex; align-items: center; gap: 12px; font-family: var(--display); font-size: 22px; font-weight: 400; letter-spacing: -0.01em; }
+  .wordmark .mark { width: 26px; height: 26px; border: 1px solid var(--champagne); border-radius: 50%; position: relative; }
+  .wordmark .mark::after { content: ""; position: absolute; left: 6px; top: 50%; width: 9px; height: 9px; border-left: 1px solid var(--champagne); border-bottom: 1px solid var(--champagne); transform: translateY(-50%) rotate(45deg); }
+  .nav-links { display: none; gap: 32px; font-size: 14px; color: var(--cream-70); }
+  .nav-links a:hover { color: var(--cream); }
+  .nav-links .soon { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--champagne); margin-left: 6px; vertical-align: 2px; }
+  .nav .btn { padding: 10px 16px; font-size: 13px; }
+  @media (min-width: 900px) { .nav-links { display: flex; } }
+
+  /* ───────────── hero ───────────── */
+  .hero { position: relative; padding: clamp(48px, 7vw, 88px) 0 clamp(48px, 7vw, 96px); overflow: hidden; }
+  .hero .wrap { display: grid; gap: 40px; }
+  @media (min-width: 980px) {
+    .hero .wrap { grid-template-columns: 1.15fr 0.85fr; align-items: center; gap: 64px; }
+  }
+  .hero-copy > * + * { margin-top: 24px; }
+  .hero h1 {
+    font-size: clamp(2.7rem, 7.4vw, 5.9rem);
+    max-width: 12ch;
+  }
+  .hero h1 .line { display: block; overflow: hidden; }
+  .hero h1 .line > span { display: block; }
+  .hero p.lede { font-size: clamp(17px, 1.4vw, 20px); color: var(--cream-70); max-width: 46ch; }
+
+  .subscribe {
+    display: flex; flex-direction: column; gap: 10px; max-width: 520px;
+  }
+  .subscribe .field {
+    display: flex; align-items: stretch;
+    border: 1px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--ink-2);
+    transition: border-color .25s ease;
+  }
+  .subscribe .field:focus-within { border-color: var(--champagne); }
+  .subscribe input {
+    flex: 1 1 0; width: 0; min-width: 0; padding: 14px 16px; background: transparent; border: 0; outline: 0;
+    color: var(--cream); font-size: 15px;
+  }
+  .subscribe input::placeholder { color: var(--cream-45); }
+  .subscribe .btn { border-radius: 0 var(--radius) var(--radius) 0; border: 0; margin: 4px; border-radius: 3px; }
+  .subscribe .meta { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--cream-45); display: flex; gap: 14px; flex-wrap: wrap; }
+  .subscribe .meta span::before { content: "·"; margin-right: 14px; color: var(--champagne); }
+  .subscribe .meta span:first-child::before { content: none; }
+  .subscribe .thanks { display: none; font-family: var(--display); font-style: italic; color: var(--champagne); font-size: 20px; }
+  .subscribe.done .field, .subscribe.done .meta { display: none; }
+  .subscribe.done .thanks { display: block; }
+
+  /* the cabin window */
+  .window-wrap { position: relative; display: flex; justify-content: center; }
+  .window {
+    position: relative;
+    width: min(100%, 360px); aspect-ratio: 3 / 4;
+    border-radius: 180px 180px 160px 160px;
+    border: 1px solid var(--line-strong);
+    padding: 14px;
+    background: var(--ink-2);
+  }
+  @media (min-width: 980px) { .window { width: min(100%, 420px); } }
+  .window .glass {
+    width: 100%; height: 100%; border-radius: inherit; overflow: hidden; position: relative;
+    background: linear-gradient(180deg, var(--dusk-1) 0%, var(--dusk-2) 42%, var(--dusk-3) 68%, var(--dusk-4) 100%);
+  }
+  .window .sky { position: absolute; inset: -10% 0; background: radial-gradient(60% 40% at 50% 62%, rgba(255, 220, 170, .55), transparent 70%); will-change: transform; }
+  .window .horizon { position: absolute; left: 0; right: 0; top: 66%; height: 1px; background: rgba(255, 240, 210, .6); filter: blur(.4px); }
+  .window .cloud {
+    position: absolute; left: -20%; right: -20%; height: 34%; top: 68%;
+    background: linear-gradient(180deg, rgba(20, 16, 20, 0.15), rgba(20, 16, 20, 0.85));
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  }
+  .window .wing {
+    position: absolute; left: -8%; bottom: 8%; width: 70%; height: 22%;
+    background: linear-gradient(90deg, #3b3632, #201d19);
+    clip-path: polygon(0 100%, 100% 55%, 100% 100%);
+    opacity: .9;
+  }
+  .window .tag {
+    position: absolute; bottom: -34px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45);
+    white-space: nowrap;
+  }
+  .window-caption {
+    position: absolute; right: 0; top: 8%;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45);
+    writing-mode: vertical-rl; display: none;
+  }
+  @media (min-width: 980px) { .window-caption { display: block; } }
+
+  /* ───────────── marquee ───────────── */
+  .marquee { border-block: 1px solid var(--line); padding: 18px 0; overflow: hidden; }
+  .marquee .track { display: flex; gap: 48px; width: max-content; animation: slide 46s linear infinite; }
+  .marquee span { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--cream-45); white-space: nowrap; }
+  .marquee span i { font-style: normal; color: var(--champagne); margin-right: 48px; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+
+  /* ───────────── section chrome ───────────── */
+  section.block { padding: clamp(64px, 9vw, 128px) 0; }
+  .section-head { display: grid; gap: 14px; margin-bottom: clamp(32px, 5vw, 64px); }
+  .section-head h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); max-width: 18ch; }
+  .section-head p { color: var(--cream-70); max-width: 52ch; }
+  @media (min-width: 900px) {
+    .section-head { grid-template-columns: 1fr 1fr; align-items: end; }
+    .section-head p { justify-self: end; }
+  }
+  .rule { height: 1px; background: var(--line); }
+
+  /* ───────────── featured issue ───────────── */
+  .featured { border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-2); overflow: hidden; }
+  .featured .top { padding: clamp(24px, 4vw, 48px); display: grid; gap: 28px; }
+  @media (min-width: 900px) { .featured .top { grid-template-columns: 1.1fr .9fr; gap: 56px; } }
+  .featured h3 { font-size: clamp(1.9rem, 3.8vw, 3.2rem); margin: 14px 0 18px; }
+  .featured .dek { color: var(--cream-70); max-width: 48ch; }
+  .featured .meta { margin-top: 26px; display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45); }
+  .featured .read { margin-top: 26px; }
+
+  .maths { border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink); padding: 22px; font-family: var(--mono); font-size: 13px; }
+  .maths .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--cream-70); }
+  .maths .row:last-of-type { border-bottom: 0; }
+  .maths .row b { font-weight: 500; color: var(--cream); }
+  .maths .verdict { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-strong); font-family: var(--display); font-style: italic; font-size: 19px; color: var(--champagne); line-height: 1.3; }
+
+  .featured .bottom { border-top: 1px solid var(--line); display: grid; }
+  @media (min-width: 900px) { .featured .bottom { grid-template-columns: 1fr 1fr; } }
+  .featured .photo { min-height: 260px; position: relative; background: linear-gradient(135deg, #1a1410, #4a3226 55%, #b98452); }
+  .featured .photo::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 60% at 70% 30%, rgba(255, 230, 190, .28), transparent 70%); }
+  .foto-tag { position: absolute; left: 16px; bottom: 14px; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: rgba(242, 236, 224, .55); z-index: 1; }
+  .featured .quote { padding: clamp(24px, 4vw, 48px); display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .featured .quote p { font-family: var(--display); font-style: italic; font-size: clamp(1.35rem, 2.2vw, 1.8rem); line-height: 1.3; }
+  .featured .quote small { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45); }
+
+  /* ───────────── status journey ───────────── */
+  .journey { position: relative; }
+  .journey .stage { display: grid; gap: 40px; }
+  @media (min-width: 980px) {
+    .journey .stage { grid-template-columns: 1fr 1fr; align-items: center; gap: 72px; }
+  }
+  .journey h2 { font-size: clamp(2.3rem, 5.2vw, 4.4rem); }
+  .journey .lede { color: var(--cream-70); max-width: 44ch; margin-top: 20px; }
+
+  .tracker {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-2);
+    padding: clamp(22px, 3vw, 36px);
+  }
+  .tracker .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .tracker .prog { font-family: var(--display); font-size: clamp(2.8rem, 6vw, 4.6rem); font-weight: 300; line-height: 1; margin: 22px 0 6px; }
+  .tracker .prog small { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45); margin-left: 10px; }
+  .tracker .sub { color: var(--cream-70); font-size: 15px; }
+  .tiers { margin-top: 30px; }
+  .tiers .bar { position: relative; height: 1px; background: var(--line-strong); }
+  .tiers .fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--champagne); }
+  .tiers .stops { display: flex; justify-content: space-between; margin-top: 12px; }
+  .tiers .stop { display: flex; flex-direction: column; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--cream-45); position: relative; }
+  .tiers .stop::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--ink-2); margin-top: -16px; transition: background .3s, border-color .3s; }
+  .tiers .stop.on { color: var(--cream); }
+  .tiers .stop.on::before { background: var(--champagne); border-color: var(--champagne); }
+  .tiers .stop.target { color: var(--champagne); }
+  .tracker .note { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .tracker .note p { font-size: 14px; color: var(--cream-70); max-width: 34ch; }
+  .tracker .pill { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--champagne); border: 1px solid var(--champagne-deep); padding: 6px 10px; border-radius: 999px; }
+
+  /* ───────────── format ───────────── */
+  .format-grid { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  @media (min-width: 820px) { .format-grid { grid-template-columns: repeat(3, 1fr); } }
+  .format-card { background: var(--ink); padding: clamp(24px, 3vw, 40px); display: flex; flex-direction: column; gap: 16px; min-height: 280px; }
+  .format-card .num { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--champagne); }
+  .format-card h3 { font-size: clamp(1.6rem, 2.4vw, 2.1rem); }
+  .format-card p { color: var(--cream-70); font-size: 15px; }
+  .format-card .ex { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); font-family: var(--display); font-style: italic; font-size: 16px; color: var(--cream-70); }
+
+  /* ───────────── archive ───────────── */
+  .issues { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  @media (min-width: 720px) { .issues { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1100px) { .issues { grid-template-columns: repeat(4, 1fr); } }
+  .issue { background: var(--ink); padding: 24px; display: flex; flex-direction: column; gap: 14px; min-height: 340px; transition: background .3s ease; }
+  .issue:hover { background: var(--ink-3); }
+  .issue .thumb { aspect-ratio: 4 / 3; border-radius: 3px; position: relative; overflow: hidden; }
+  .issue .thumb .foto-tag { left: 12px; bottom: 10px; }
+  .issue .thumb.a { background: linear-gradient(160deg, #1c1a24, #3f2b3c 50%, #c47c58); }
+  .issue .thumb.b { background: linear-gradient(160deg, #0f1c1e, #1e3a3a 55%, #7f9d8a); }
+  .issue .thumb.c { background: linear-gradient(160deg, #1c1410, #5c3d24 55%, #d9a76a); }
+  .issue .thumb.d { background: linear-gradient(160deg, #101418, #2a3542 55%, #93a2b3); }
+  .issue .k { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45); display: flex; justify-content: space-between; }
+  .issue h3 { font-size: 1.45rem; line-height: 1.12; }
+  .issue p { font-size: 14px; color: var(--cream-70); }
+  .issue .more { margin-top: auto; font-size: 13px; color: var(--champagne); display: inline-flex; gap: 8px; align-items: center; }
+  .archive-foot { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+  /* ───────────── about ───────────── */
+  .about .wrap { display: grid; gap: 36px; }
+  @media (min-width: 900px) { .about .wrap { grid-template-columns: .8fr 1.2fr; gap: 72px; align-items: center; } }
+  .portrait { aspect-ratio: 4 / 5; max-width: 380px; border-radius: 3px; position: relative; background: linear-gradient(170deg, #14110e, #3a2f26 60%, #8a6a44); overflow: hidden; }
+  .portrait::after { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 40% at 50% 30%, rgba(255, 230, 190, .22), transparent 70%); }
+  .about h2 { font-size: clamp(2rem, 4.4vw, 3.4rem); margin: 14px 0 22px; }
+  .about p { color: var(--cream-70); max-width: 56ch; }
+  .about p + p { margin-top: 16px; }
+  .about .sig { margin-top: 26px; font-family: var(--display); font-style: italic; font-size: 22px; color: var(--champagne); }
+
+  /* ───────────── subscribe band ───────────── */
+  .band { border-block: 1px solid var(--line); background: var(--ink-2); }
+  .band .wrap { display: grid; gap: 28px; padding: clamp(56px, 8vw, 112px) 0; }
+  @media (min-width: 980px) { .band .wrap { grid-template-columns: 1.1fr .9fr; align-items: center; gap: 64px; } }
+  .band h2 { font-size: clamp(2.4rem, 5.6vw, 4.8rem); max-width: 14ch; }
+
+  /* ───────────── footer ───────────── */
+  footer { padding: 40px 0 48px; }
+  footer .row { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--cream-45); }
+  footer .links { display: flex; gap: 22px; flex-wrap: wrap; }
+  footer .links a:hover { color: var(--cream); }
+  footer .disclaimer { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--cream-45); max-width: 78ch; line-height: 1.6; }
+  footer .studio { margin-top: 14px; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream-45); }
+
+  /* reduced motion: everything visible, marquee still */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee .track { animation: none; }
+    .tiers .fill { width: 72%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="notice" id="notice">
+  <span>Design proposal · sample headlines, stats and photography are placeholders</span>
+  <button type="button" onclick="document.getElementById('notice').remove()">Close</button>
+</div>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="wordmark" href="#"><span class="mark" aria-hidden="true"></span>Turn Left</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#issues">Issues</a>
+      <a href="#journey">Status Tracker<span class="soon">Soon</span></a>
+      <a href="#about">About</a>
+    </nav>
+    <a class="btn" href="#subscribe">Subscribe</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="eyebrow" data-hero>Issue 007 · Fortnightly from Kuala Lumpur</p>
+        <h1 aria-label="Status, strategy, and the stays worth the miles.">
+          <span class="line"><span data-hero-line>Status,</span></span>
+          <span class="line"><span data-hero-line>strategy,</span></span>
+          <span class="line"><span data-hero-line>and the stays</span></span>
+          <span class="line"><span data-hero-line><em>worth the miles.</em></span></span>
+        </h1>
+        <p class="lede" data-hero>A letter for people who chase elite status from KUL and want the maths and the moment. Which tier is worth it, which stays justify it, and what to do with the points you already have.</p>
+        <form class="subscribe" id="subscribe" data-hero onsubmit="event.preventDefault(); this.classList.add('done');">
+          <div class="field">
+            <input type="email" placeholder="you@email.com" aria-label="Email address" required>
+            <button class="btn" type="submit">Subscribe <span class="arrow">→</span></button>
+          </div>
+          <div class="meta"><span>Free</span><span>Fortnightly</span><span>No affiliate spam</span></div>
+          <p class="thanks">Nice. The next issue lands in your inbox.</p>
+        </form>
+      </div>
+
+      <div class="window-wrap" data-hero-window>
+        <div class="window">
+          <div class="glass">
+            <div class="sky" data-parallax></div>
+            <div class="horizon"></div>
+            <div class="cloud"></div>
+            <div class="wing"></div>
+          </div>
+          <span class="tag">Foto · swap with your own window seat</span>
+        </div>
+        <span class="window-caption">Seat 1A · Somewhere over the Andaman</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROGRAMME MARQUEE -->
+  <div class="marquee" aria-hidden="true">
+    <div class="track">
+      <span><i>✦</i>Enrich</span><span><i>✦</i>KrisFlyer</span><span><i>✦</i>Marriott Bonvoy</span><span><i>✦</i>Hilton Honors</span><span><i>✦</i>Accor ALL</span><span><i>✦</i>World of Hyatt</span><span><i>✦</i>Asia Miles</span><span><i>✦</i>IHG One Rewards</span>
+      <span><i>✦</i>Enrich</span><span><i>✦</i>KrisFlyer</span><span><i>✦</i>Marriott Bonvoy</span><span><i>✦</i>Hilton Honors</span><span><i>✦</i>Accor ALL</span><span><i>✦</i>World of Hyatt</span><span><i>✦</i>Asia Miles</span><span><i>✦</i>IHG One Rewards</span>
+    </div>
+  </div>
+
+  <!-- FEATURED ISSUE -->
+  <section class="block" id="latest">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>The latest <em>letter</em></h2>
+        <p>Every issue pairs a verdict you can act on with a stay you would actually want. The numbers first, then the feeling.</p>
+      </div>
+
+      <article class="featured" data-reveal>
+        <div class="top">
+          <div>
+            <p class="eyebrow">Issue 007 · The verdict</p>
+            <h3>Is Marriott Titanium worth chasing from KL in 2026?</h3>
+            <p class="dek">Seventy five nights is a lot of hotel. We ran the cost of the last twenty against what Titanium actually returns in Southeast Asia, then spent three of those nights finding out.</p>
+            <div class="meta"><span>12 min read</span><span>Marriott Bonvoy</span><span>Hotels</span></div>
+            <a class="btn ghost read" href="#">Read the issue <span class="arrow">→</span></a>
+          </div>
+          <div class="maths" aria-label="Sample calculation">
+            <div class="row"><span>Nights to Titanium</span><b>75</b></div>
+            <div class="row"><span>Nights already booked</span><b>68</b></div>
+            <div class="row"><span>Gap</span><b>7 nights</b></div>
+            <div class="row"><span>Cost to close, cheapest</span><b>RM X</b></div>
+            <div class="row"><span>Suite upgrades, est. value</span><b>RM X</b></div>
+            <div class="verdict">Worth it, if you close the gap in Malaysia and Thailand. Not worth it from Singapore rates.</div>
+          </div>
+        </div>
+        <div class="bottom">
+          <div class="photo"><span class="foto-tag">Foto · the suite, your own photo</span></div>
+          <div class="quote">
+            <p>“The upgrade came through at 3pm. By 6pm I understood why people do this, and by morning I understood why most of them stop.”</p>
+            <small>From the stay · Issue 007</small>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="rule"></div></div>
+
+  <!-- STATUS JOURNEY -->
+  <section class="block journey" id="journey">
+    <div class="wrap stage">
+      <div data-reveal>
+        <p class="eyebrow">Status Tracker · Coming soon</p>
+        <h2 style="margin-top:14px">Know exactly <em>where you stand.</em></h2>
+        <p class="lede">Enter your tiers once. Forward your confirmations. Turn Left projects your year, tells you which programme deserves your next seven nights, and flags the deadline before it passes.</p>
+        <p class="lede" style="margin-top:14px;font-size:15px">No passwords. No account scraping. Your data stays yours.</p>
+      </div>
+
+      <div class="tracker" data-reveal>
+        <div class="head">
+          <span class="eyebrow">Marriott Bonvoy · Sample profile</span>
+          <span class="eyebrow muted">Year ends 31 Dec</span>
+        </div>
+        <div class="prog"><span data-count="54">0</span><small>elite nights</small></div>
+        <p class="sub">Confirmed <b style="color:var(--cream);font-weight:500">+14</b> · Projected <b style="color:var(--cream);font-weight:500">68</b> · Target <b style="color:var(--champagne);font-weight:500">75</b></p>
+        <div class="tiers">
+          <div class="bar"><div class="fill" data-fill></div></div>
+          <div class="stops">
+            <span class="stop" data-stop="0">Member</span>
+            <span class="stop" data-stop="13">Silver</span>
+            <span class="stop" data-stop="33">Gold</span>
+            <span class="stop" data-stop="66">Platinum</span>
+            <span class="stop target" data-stop="100">Titanium</span>
+          </div>
+        </div>
+        <div class="note">
+          <p>Seven nights short. Prioritise Marriott through November, then move the rest back to Hilton.</p>
+          <span class="pill">Recommendation</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="rule"></div></div>
+
+  <!-- FORMAT -->
+  <section class="block" id="format">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>Every issue, <em>three things.</em></h2>
+        <p>Short enough to read in the lounge. Useful enough to change a booking.</p>
+      </div>
+      <div class="format-grid">
+        <div class="format-card" data-reveal>
+          <span class="num">01</span>
+          <h3>The verdict</h3>
+          <p>One programme question, answered with the actual maths. Tier thresholds, earning rates, what changed this quarter and whether it matters to you.</p>
+          <p class="ex">“Enrich 2026, explained without the marketing.”</p>
+        </div>
+        <div class="format-card" data-reveal>
+          <span class="num">02</span>
+          <h3>The stay</h3>
+          <p>One hotel or one cabin, told as a story. What the status actually got us, what it did not, and whether we would go back on our own money.</p>
+          <p class="ex">“Three nights on points in Langkawi. What the suite actually got us.”</p>
+        </div>
+        <div class="format-card" data-reveal>
+          <span class="num">03</span>
+          <h3>Your points</h3>
+          <p>A reader sends their balances and a dream. We answer with a route, a cabin and a number. Anonymous, specific, and occasionally brutal.</p>
+          <p class="ex">“124k KrisFlyer, two adults, wants Tokyo in J. Here is how.”</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHIVE -->
+  <section class="block" id="issues" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>Previous <em>issues</em></h2>
+        <p>Everything is free to read. Subscribers get it first.</p>
+      </div>
+      <div class="issues">
+        <a class="issue" href="#" data-reveal>
+          <div class="thumb a"><span class="foto-tag">Foto</span></div>
+          <div class="k"><span>Issue 006</span><span>Airlines</span></div>
+          <h3>Enrich 2026, explained without the marketing</h3>
+          <p>Elite Points, new thresholds, and who the refresh actually helps.</p>
+          <span class="more">Read <span class="arrow">→</span></span>
+        </a>
+        <a class="issue" href="#" data-reveal>
+          <div class="thumb b"><span class="foto-tag">Foto</span></div>
+          <div class="k"><span>Issue 005</span><span>Airlines</span></div>
+          <h3>KrisFlyer from KUL: where the miles actually work</h3>
+          <p>The routes and cabins where a KrisFlyer balance goes furthest, and the ones to avoid.</p>
+          <span class="more">Read <span class="arrow">→</span></span>
+        </a>
+        <a class="issue" href="#" data-reveal>
+          <div class="thumb c"><span class="foto-tag">Foto</span></div>
+          <div class="k"><span>Issue 004</span><span>Hotels</span></div>
+          <h3>Three nights on points in Langkawi</h3>
+          <p>A Bonvoy redemption, an upgrade that did happen, and a breakfast that was worth the status alone.</p>
+          <span class="more">Read <span class="arrow">→</span></span>
+        </a>
+        <a class="issue" href="#" data-reveal>
+          <div class="thumb d"><span class="foto-tag">Foto</span></div>
+          <div class="k"><span>Issue 003</span><span>Strategy</span></div>
+          <h3>Should you status match before the year ends?</h3>
+          <p>When a match is a gift, when it is a trap, and the order to do it in.</p>
+          <span class="more">Read <span class="arrow">→</span></span>
+        </a>
+      </div>
+      <div class="archive-foot" data-reveal>
+        <span class="eyebrow muted">Seven issues and counting</span>
+        <a class="btn ghost" href="#">Browse the archive <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="rule"></div></div>
+
+  <!-- ABOUT -->
+  <section class="block about" id="about">
+    <div class="wrap">
+      <div class="portrait" data-reveal><span class="foto-tag">Foto · you, ideally in a lounge</span></div>
+      <div data-reveal>
+        <p class="eyebrow">Who writes this</p>
+        <h2>Written from seat 1A, <em>mostly.</em></h2>
+        <p>I am Qie, a software engineer in Kuala Lumpur who reads programme terms so you do not have to. I chase status the way some people chase watches, and I have made most of the expensive mistakes already.</p>
+        <p>Turn Left is independent. No airline or hotel pays for a mention, and when a link earns a commission it says so. The stays are paid for with my own money or my own points, and the verdicts are mine.</p>
+        <p class="sig">Qie</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUBSCRIBE BAND -->
+  <section class="band" id="subscribe-band">
+    <div class="wrap">
+      <div data-reveal>
+        <p class="eyebrow">Join the list</p>
+        <h2 style="margin-top:14px">Turn left <em>on purpose.</em></h2>
+      </div>
+      <form class="subscribe" data-reveal onsubmit="event.preventDefault(); this.classList.add('done');">
+        <div class="field">
+          <input type="email" placeholder="you@email.com" aria-label="Email address" required>
+          <button class="btn" type="submit">Subscribe <span class="arrow">→</span></button>
+        </div>
+        <div class="meta"><span>Free</span><span>Fortnightly</span><span>Leave any time</span></div>
+        <p class="thanks">Nice. The next issue lands in your inbox.</p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <a class="wordmark" href="#" style="font-size:18px"><span class="mark" aria-hidden="true"></span>Turn Left</a>
+      <div class="links">
+        <a href="#issues">Issues</a>
+        <a href="#journey">Status Tracker</a>
+        <a href="#about">About</a>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+    <p class="disclaimer">Turn Left is an independent publication and is not affiliated with, endorsed by or sponsored by any airline, hotel group or loyalty programme. Programme names are used for identification only. Nothing here is financial advice. Always verify status rules with the programme before you book.</p>
+    <p class="studio">© 2026 Turn Left · Designed by Qie / Axel Nova Ventures · Simple, effortless, human.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js"></script>
+<script>
+(function () {
+  // Nothing is hidden by CSS, so if GSAP fails to load the page still reads fully.
+  if (!window.gsap || !window.ScrollTrigger) return;
+  gsap.registerPlugin(ScrollTrigger);
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) {
+    document.querySelectorAll('[data-count]').forEach(function (el) { el.textContent = el.dataset.count; });
+    document.querySelectorAll('.stop').forEach(function (s) { if (+s.dataset.stop <= 72) s.classList.add('on'); });
+    return;
+  }
+
+  // Smooth scroll (marketing page only)
+  if (window.Lenis) {
+    var lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  // ── Hero entrance
+  gsap.set('[data-hero-line]', { yPercent: 110 });
+  gsap.set('[data-hero]', { autoAlpha: 0, y: 18 });
+  gsap.set('[data-hero-window]', { autoAlpha: 0, scale: 0.94, y: 30 });
+
+  var intro = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.15 });
+  intro
+    .to('[data-hero-line]', { yPercent: 0, duration: 1.1, stagger: 0.09 })
+    .to('[data-hero]', { autoAlpha: 1, y: 0, duration: 0.9, stagger: 0.1 }, '-=0.7')
+    .to('[data-hero-window]', { autoAlpha: 1, scale: 1, y: 0, duration: 1.3, ease: 'power2.out' }, '-=1.0');
+
+  // ── Hero parallax
+  gsap.to('[data-parallax]', {
+    yPercent: 14, ease: 'none',
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true }
+  });
+  gsap.to('[data-hero-window] .window', {
+    yPercent: -8, ease: 'none',
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true }
+  });
+
+  // ── Section reveals
+  gsap.utils.toArray('[data-reveal]').forEach(function (el) {
+    gsap.fromTo(el, { autoAlpha: 0, y: 32 }, {
+      autoAlpha: 1, y: 0, duration: 1, ease: 'power3.out',
+      scrollTrigger: { trigger: el, start: 'top 88%', once: true }
+    });
+  });
+
+  // ── Status journey: scrubbed progress
+  var fill = document.querySelector('[data-fill]');
+  var count = document.querySelector('[data-count]');
+  var stops = gsap.utils.toArray('.stop');
+  var target = +count.dataset.count;      // 54 nights
+  var pct = 72;                           // 54 of 75, as % of bar
+  var state = { v: 0 };
+
+  gsap.to(state, {
+    v: 1, ease: 'none',
+    scrollTrigger: { trigger: '.tracker', start: 'top 80%', end: 'top 30%', scrub: 0.6 },
+    onUpdate: function () {
+      var p = state.v * pct;
+      fill.style.width = p + '%';
+      count.textContent = Math.round(state.v * target);
+      stops.forEach(function (s) { s.classList.toggle('on', +s.dataset.stop <= p); });
+    }
+  });
+})();
+</script>
+</body>
+</html>
