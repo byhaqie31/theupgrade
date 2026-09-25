@@ -6,7 +6,6 @@ import {
   clamp,
   lerp,
   nextSmoothScroll,
-  normalizeSightIndex,
   segmentInOut,
   smoothstep,
 } from '../app/utils/cinema.ts'
@@ -40,19 +39,6 @@ test('helpers follow the source spec §7', () => {
   assert.equal(entering.active, entering.enter)
 })
 
-test('normalizeSightIndex loops the three card sets (source §8)', () => {
-  assert.equal(normalizeSightIndex(5, 5), null)
-  assert.equal(normalizeSightIndex(9, 5), null)
-  assert.equal(normalizeSightIndex(10, 5), 5)
-  assert.equal(normalizeSightIndex(14, 5), 9)
-  assert.equal(normalizeSightIndex(4, 5), 9)
-  assert.equal(normalizeSightIndex(0, 5), 5)
-  // Review focus 1: a single issue still loops.
-  assert.equal(normalizeSightIndex(3, 1), 2)
-  assert.equal(normalizeSightIndex(0, 1), 1)
-  assert.equal(normalizeSightIndex(1, 1), null)
-})
-
 test('nextSmoothScroll snaps on the first frame and under reduced motion (review focus 2)', () => {
   assert.equal(nextSmoothScroll(0, 2300, false, false), 2300)
   near(nextSmoothScroll(0, 2300, true, false), 322)
@@ -61,7 +47,7 @@ test('nextSmoothScroll snaps on the first frame and under reduced motion (review
 })
 
 test('scroll 0 is the source :root default state', () => {
-  const { vars, controlsReady, live } = at(0)
+  const { vars, live } = at(0)
   assert.equal(vars['--title-opacity'], '1')
   assert.equal(vars['--title-y'], '0px')
   assert.equal(vars['--intro-copy-opacity'], '1')
@@ -78,7 +64,6 @@ test('scroll 0 is the source :root default state', () => {
   assert.equal(vars['--split-left-x'], 'calc(-50% + 0vw + 0px)')
   assert.equal(vars['--sights-screen-top'], '121px')
   near(vars['--sights-top'], -125)
-  assert.equal(controlsReady, false)
   assert.deepEqual(live, { intro: true, panel2: false, panel3: false })
 })
 
@@ -141,13 +126,6 @@ test('scroll 3560: slider fully in and counter-scaled by 1 / backScale', () => {
   near(vars['--sights-scale'], 1 / 1.3, 1e-9)
 })
 
-test('controls become ready only past 0.98 of their segment', () => {
-  assert.equal(at(3600).controlsReady, false)
-  const done = at(3660)
-  assert.equal(done.controlsReady, true)
-  assert.equal(done.vars['--sights-controls-opacity'], '1')
-})
-
 test('pointer drives the parallax vars; reduced motion zeroes --mx/--my only', () => {
   const moved = at(0, { mouseX: 0.3, mouseY: -0.2 })
   assert.equal(moved.vars['--mx'], '0.3000')
@@ -175,11 +153,18 @@ test('pointer drives the parallax vars; reduced motion zeroes --mx/--my only', (
   }
 })
 
-test('sights left is solved so the active card lands at 48px on screen', () => {
-  // stackLeft = W/2 - 0.53·W·backScale; left = (48 + 0.18·W - stackLeft) / backScale, backScale 1.3 at 3560.
-  near(at(3560, { innerWidth: 1440 }).vars['--sights-left'], 445.6615, 1e-3)
-  near(at(3560, { innerWidth: 390 }).vars['--sights-left'], 147.623, 1e-3)
+test('sights left cancels the scaled back stack so the grid block starts at screen x = 0', () => {
+  // stackLeft = W/2 - 0.53·W·backScale; left = -stackLeft / backScale, backScale 1.3 at 3560.
+  near(at(3560, { innerWidth: 1440 }).vars['--sights-left'], 209.3538, 1e-3)
+  near(at(3560, { innerWidth: 390 }).vars['--sights-left'], 56.7000, 1e-3)
   assert.ok(at(3560).vars['--sights-left']?.endsWith('px'))
+  assert.equal(at(3560).vars['--sights-controls-opacity'], undefined)
+})
+
+test('window halves part 118vw below 1100px wide so they clear a phone screen (delta 35)', () => {
+  assert.equal(at(1100, { innerWidth: 390 }).vars['--split-left-x'], 'calc(-50% + -118vw + 0px)')
+  assert.equal(at(1100, { innerWidth: 390 }).vars['--split-right-x'], 'calc(-50% + 118vw + 0px)')
+  assert.equal(at(1100, { innerWidth: 1440 }).vars['--split-left-x'], 'calc(-50% + -46vw + 0px)')
 })
 
 test('sights screen top clamps with viewport height (review focus 4)', () => {

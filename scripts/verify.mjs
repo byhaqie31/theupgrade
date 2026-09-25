@@ -18,6 +18,7 @@ import { createServer } from 'node:http'
 import { readFile, stat, mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { extname, join, normalize, resolve } from 'node:path'
+import { inflateSync } from 'node:zlib'
 import { chromium } from 'playwright-core'
 
 const ROOT = resolve(import.meta.dirname, '..')
@@ -45,6 +46,25 @@ const MIME = {
   '.txt': 'text/plain',
   '.wasm': 'application/wasm',
 }
+
+/** Colour of one screen pixel from a 1×1 clip screenshot (a 1×1 PNG row needs no unfiltering). */
+async function pixelAt(page, x, y) {
+  // `clip` is viewport-relative for a non-full-page screenshot, so sample while the stop is on screen.
+  const png = await page.screenshot({ clip: { x, y, width: 1, height: 1 } })
+  const idat = []
+  for (let off = 8; off < png.length;) {
+    const len = png.readUInt32BE(off)
+    const type = png.toString('ascii', off + 4, off + 8)
+    if (type === 'IDAT') idat.push(png.subarray(off + 8, off + 8 + len))
+    off += 12 + len
+  }
+  const raw = inflateSync(Buffer.concat(idat))
+  return [raw[1], raw[2], raw[3]]
+}
+
+/** The cream card surface (#f5f0e6) allowing for the 3.5% grain overlay. */
+const PAPER = [245, 240, 230]
+const isPaper = px => px.every((v, i) => Math.abs(v - PAPER[i]) <= 16)
 
 async function serveStatic() {
   if (!existsSync(join(PUBLIC, 'index.html'))) {
@@ -166,24 +186,36 @@ const SCRUB_CHECK = () => {
     panel3: parseFloat(v('--panel3-opacity')),
     sightsVisibility: v('--sights-visibility'),
     sightsEnterX: v('--sights-enter-x'),
-    controlsReady: document.querySelector('.sights-controls').classList.contains('is-ready'),
-    controlsDisabled: [...document.querySelectorAll('.sight-nav')].every(b => b.disabled),
     cardsHidden: [...document.querySelectorAll('.sight-card')].every(hidden),
+    cards: [...document.querySelectorAll('.sight-card')].map((c) => {
+      const r = c.getBoundingClientRect()
+      return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) }
+    }),
+    links: document.querySelectorAll('a.sight-card[href]').length,
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
     introHidden: hidden(document.querySelector('.intro-copy')),
     noteHidden: hidden(document.querySelector('.note-button')),
     headerBg: getComputedStyle(header).backgroundColor,
-    activeCard: document.querySelector('.sight-card.is-active')?.dataset.sightIndex ?? null,
   }
 }
 
 const TRANSPARENT = 'rgba(0, 0, 0, 0)'
+/** Four linked cards, every one fully on screen, laid out in two rows and two columns, centred within a pixel. */
+const gridOk = (r) => {
+  const c = r.cards
+  if (c.length !== 4 || r.links !== 4) return false
+  const onScreen = c.every(k => k.l >= 0 && k.t >= 0 && k.r <= r.innerWidth && k.b <= r.innerHeight)
+  const lefts = new Set(c.map(k => k.l)), tops = new Set(c.map(k => k.t))
+  const minL = Math.min(...c.map(k => k.l)), maxR = Math.max(...c.map(k => k.r))
+  return onScreen && lefts.size === 2 && tops.size === 2 && Math.abs(minL - (r.innerWidth - maxR)) <= 2
+}
 const SCRUB_EXPECT = {
   0: r => r.titleOpacity === 1 && r.sightsVisibility === 'hidden' && r.headerBg === TRANSPARENT && r.bridgeOpacity === 1 && r.imagesDecoded
-    && r.cardsHidden && r.controlsDisabled && r.noteHidden && r.introHidden === false,
+    && r.cardsHidden && r.noteHidden && r.introHidden === false,
   1100: r => r.titleOpacity === 0 && r.frame2 >= 0.99 && r.panel2 >= 0.99 && r.introHidden,
   2300: r => r.panel3 >= 0.99 && r.frame2 <= 0.01 && r.noteHidden === false && r.bridgeOpacity === 0,
-  3700: r => r.sightsVisibility === 'visible' && r.sightsEnterX === '0vw' && r.controlsReady
-    && r.headerBg === TRANSPARENT && r.activeCard === '5',
+  3700: r => r.sightsVisibility === 'visible' && r.sightsEnterX === '0vw' && r.headerBg === TRANSPARENT && gridOk(r),
   4700: r => r.headerBg !== TRANSPARENT,
 }
 
@@ -255,54 +287,34 @@ async function main() {
         result.ok = SCRUB_EXPECT[y](result)
         report.scrub[y] = result
         if (!result.ok) failures++
+        if (y === 3700) {
+          // Paint order, while this stop is on screen: a cream pixel inside every card
+          // (elementFromPoint cannot see the pointer-events:none deck, so sample the pixels).
+          const cardPixels = []
+          for (const k of result.cards) {
+            const px = await pixelAt(page, Math.round(k.l + (k.r - k.l) * 0.4), Math.round(k.t + (k.b - k.t) * 0.35))
+            cardPixels.push({ px, ok: isPaper(px) })
+          }
+          report.scrub.cardPixels = cardPixels
+          if (!cardPixels.every(c => c.ok)) failures++
+        }
       }
-      // One slider step: the next card becomes active after the 640ms slide.
-      await page.click('.sight-next')
-      await page.waitForTimeout(800)
-      const afterNext = await page.evaluate(SCRUB_CHECK)
-      report.scrub.afterNext = { activeCard: afterNext.activeCard, ok: afterNext.activeCard === '6' }
-      if (!report.scrub.afterNext.ok) failures++
-      // The active card must sit on screen at the controls' left edge (48px), and selecting a card brings it there.
-      // The back stack (slider included) drifts up to 6px with the pointer by design, so park the pointer at the centre first.
-      const centrePointer = async () => {
-        await page.evaluate(() => { document.querySelector('.cinema-scroll').dataset.settled = 'false' })
-        await page.mouse.move(720, 450)
-        await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
-      }
-      await centrePointer()
-      const landing = await page.evaluate(() => {
-        const el = document.querySelector('.sight-card.is-active')
-        const r = el.getBoundingClientRect()
-        return { index: el.dataset.sightIndex, left: Math.round(r.left), right: Math.round(r.right), innerWidth: window.innerWidth }
-      })
-      landing.ok = Math.abs(landing.left - 48) <= 1 && landing.right <= landing.innerWidth
-      report.scrub.landing = landing
-      if (!landing.ok) failures++
-      await page.click('.sight-card[data-sight-index="7"]')
-      await page.waitForTimeout(800)
-      await centrePointer()
-      const selected = await page.evaluate(() => {
-        const el = document.querySelector('.sight-card[data-sight-index="7"]')
-        return { active: el.classList.contains('is-active'), left: Math.round(el.getBoundingClientRect().left) }
-      })
-      selected.ok = selected.active && Math.abs(selected.left - 48) <= 1
-      report.scrub.selected = selected
-      if (!selected.ok) failures++
-      // Keyboard: only the middle set is tabbable, focus is visible, and tabbing never scrolls the clipped stage.
+      // Keyboard: the four cards are real links in order, focus is visible, and tabbing never scrolls the clipped stage.
       const focusable = await page.evaluate(() => ({
-        tabbable: document.querySelectorAll('.sight-card[tabindex="0"]').length,
+        tabbable: document.querySelectorAll('a.sight-card[href]').length,
         ariaHidden: document.querySelectorAll('.sight-card[aria-hidden="true"]').length,
         worldOverflow: getComputedStyle(document.querySelector('.world')).overflow,
         stageOverflow: getComputedStyle(document.querySelector('.stage')).overflow,
+        order: [...document.querySelectorAll('a.sight-card')].map(a => a.dataset.issueNo),
       }))
-      await page.focus('.sight-card[data-sight-index="5"]')
+      await page.focus('a.sight-card')
       const tabs = []
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         await page.keyboard.press('Tab')
         tabs.push(await page.evaluate(() => {
           const el = document.activeElement
           return {
-            focused: el?.dataset?.sightIndex ?? String(el?.className ?? '').slice(0, 24),
+            focused: el?.dataset?.issueNo ?? String(el?.className ?? '').slice(0, 24),
             outline: el ? getComputedStyle(el).outlineStyle : null,
             worldScrollLeft: document.querySelector('.world').scrollLeft,
             stageScrollLeft: document.querySelector('.stage').scrollLeft,
@@ -310,14 +322,55 @@ async function main() {
         }))
       }
       const keyboard = { ...focusable, tabs }
-      keyboard.ok = focusable.tabbable === 5 && focusable.ariaHidden === 10
+      keyboard.ok = focusable.tabbable === 4 && focusable.ariaHidden === 0
         && focusable.worldOverflow === 'clip' && focusable.stageOverflow === 'clip'
-        && tabs.slice(0, 4).every((t, i) => t.focused === String(6 + i) && t.outline !== 'none' && t.worldScrollLeft === 0 && t.stageScrollLeft === 0)
-        && tabs[4].focused !== '10'
+        && tabs.every((t, i) => t.focused === focusable.order[i + 1] && t.outline !== 'none' && t.worldScrollLeft === 0 && t.stageScrollLeft === 0)
       report.scrub.keyboard = keyboard
       if (!keyboard.ok) failures++
       report.scrub.errors = errors
       if (errors.length) failures++
+      await context.close()
+    }
+
+    // Narrow viewport: once parted, the window halves must clear the screen, and the grid stacks in one column.
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+      const page = await context.newPage()
+      await page.goto(base + '/', { waitUntil: 'networkidle' })
+      await page.evaluate(() => document.fonts.ready)
+      report.narrow = {}
+      for (const y of [1100, 3700]) {
+        await page.evaluate((top) => {
+          document.querySelector('.cinema-scroll').dataset.settled = 'false'
+          window.scrollTo(0, top)
+          window.dispatchEvent(new Event('scroll'))
+        }, y)
+        await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
+        await page.waitForTimeout(100)
+        await page.screenshot({ path: join(OUT, `390-scroll-${y}.png`) })
+        const r = await page.evaluate(() => {
+          const box = el => el.getBoundingClientRect()
+          const L = box(document.querySelector('.splitframe-left'))
+          const R = box(document.querySelector('.splitframe-right'))
+          return {
+            leftContentRight: Math.round(L.left + L.width / 2),
+            rightContentLeft: Math.round(R.left + R.width / 2),
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            cards: [...document.querySelectorAll('.sight-card')].map((c) => {
+              const b = box(c)
+              return { l: Math.round(b.left), t: Math.round(b.top), r: Math.round(b.right), b: Math.round(b.bottom) }
+            }),
+          }
+        })
+        r.halvesClear = r.leftContentRight <= 0 && r.rightContentLeft >= r.innerWidth
+        const stacked = r.cards.length === 4
+          && r.cards.every(k => k.l >= 0 && k.r <= r.innerWidth && k.t >= 0 && k.b <= r.innerHeight)
+          && new Set(r.cards.map(k => k.l)).size === 1 && new Set(r.cards.map(k => k.t)).size === 4
+        r.ok = r.halvesClear && (y !== 3700 || stacked)
+        report.narrow[y] = r
+        if (!r.ok) failures++
+      }
       await context.close()
     }
 
@@ -339,22 +392,13 @@ async function main() {
       const identical = Buffer.compare(a, b) === 0
       report.reducedMotion = { ...anim, staticAcrossOneSecond: identical }
       if (anim.animationName !== 'none' || !identical) failures++
-      // With transitions off the loop must still normalise (no transitionend arrives): 6 × next from 5 lands on 6.
+      // The pointer must not move any layer under reduced motion.
       await page.evaluate(() => {
         document.querySelector('.cinema-scroll').dataset.settled = 'false'
         window.scrollTo(0, 3700)
         window.dispatchEvent(new Event('scroll'))
       })
       await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
-      for (let i = 0; i < 6; i++) {
-        await page.click('.sight-next')
-        await page.waitForTimeout(80)
-      }
-      await page.waitForTimeout(300)
-      const loop = await page.evaluate(() => document.querySelector('.sight-card.is-active')?.dataset.sightIndex ?? null)
-      report.reducedMotion.loopAfterSixNext = loop
-      if (loop !== '6') failures++
-      // And the pointer must not move any layer.
       await page.evaluate(() => { document.querySelector('.cinema-scroll').dataset.settled = 'false' })
       await page.mouse.move(100, 100)
       await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')

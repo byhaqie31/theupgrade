@@ -7,7 +7,7 @@ const { featured, recent, all } = await useIssues()
 <template>
   <div>
     <HeroCinema
-      :issues="all.slice(0, 5)"
+      :issues="all.slice(0, 4)"
       :issue-count="all.length"
     />
 

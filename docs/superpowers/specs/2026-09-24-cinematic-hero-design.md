@@ -51,7 +51,7 @@ New:
 | `app/composables/useHeroUnderNav.ts` | `useState<boolean>('hero-under-nav', () => false)` shared between the hero and `SiteNav` |
 | `app/utils/cinema.ts` | Pure math: `clamp`, `smoothstep`, `lerp`, `segmentInOut`, `cinemaFrame()` |
 | `tests/cinema.test.ts` | Node test runner assertions for `cinema.ts` against the acceptance numbers |
-| `public/img/hero/sky.svg` … `closeup.svg` | Seven placeholder layers, §7 |
+| `public/img/hero/sky.jpg` … `closeup.svg` | Seven placeholder layers, §7 |
 
 Edited:
 
@@ -73,21 +73,18 @@ Deleted: `app/components/HeroStage.vue`.
 section.cinema-scroll#cinema        [aria-label="The Upgrade cinematic scroll story"]
 └─ div.stage
    ├─ div.world
-   │  ├─ img.scene-img.sky-img                       /img/hero/sky.svg
+   │  ├─ img.scene-img.sky-img                       /img/hero/sky.jpg
    │  ├─ div.back-stack
-   │  │  ├─ img.scene-img.back-img.back-four         /img/hero/glow.svg
-   │  │  ├─ section.sights-slider                    [aria-label="Recent issues"]
-   │  │  │  └─ div.sights-track
-   │  │  │     └─ 15 × article.sight-card            3 sets × 5 issues, [tabindex="0" role="button"]
-   │  │  └─ img.scene-img.back-img.back-bazaar       /img/hero/horizon.svg
-   │  ├─ div.sights-controls                         [aria-label="Slider controls"]
-   │  │  ├─ button.sight-nav.sight-prev "←"          [aria-label="Previous issue"]
-   │  │  └─ button.sight-nav.sight-next "→"          [aria-label="Next issue"]
+   │  │  ├─ img.scene-img.back-img.back-four         /img/hero/glow.webp
+   │  │  ├─ section.sights-slider                    [aria-label="Recent issues"]  (2026-09-25: static 2×2 grid, delta 33)
+   │  │  │  └─ div.sights-grid
+   │  │  │     └─ 4 × NuxtLink.sight-card            the four newest issues, to issue.path, [data-issue-no]
+   │  │  └─ img.scene-img.back-img.back-bazaar       /img/hero/horizon.webp
    │  ├─ h1.hero-title                               hero.title
-   │  ├─ img.scene-img.splitframe-img.splitframe-left    /img/hero/window-left.svg
-   │  ├─ img.scene-img.splitframe-img.splitframe-right   /img/hero/window-right.svg
-   │  ├─ img.scene-img.bridge-img                    /img/hero/wing.svg
-   │  ├─ img.scene-img.frame-two-img                 /img/hero/closeup.svg
+   │  ├─ img.scene-img.splitframe-img.splitframe-left    /img/hero/window-left.webp
+   │  ├─ img.scene-img.splitframe-img.splitframe-right   /img/hero/window-right.webp
+   │  ├─ img.scene-img.bridge-img                    /img/hero/wing.webp
+   │  ├─ img.scene-img.frame-two-img                 /img/hero/closeup.jpg
    │  └─ div.shade
    ├─ section.intro-copy                             [aria-label="The Upgrade overview"]
    │  ├─ p                                           hero.intro.lead + <em>hero.intro.em</em>
@@ -105,11 +102,9 @@ Differences from the source tree: no `header.site-header` (SiteNav covers it); t
 carries the form and pills; the note button is a link; cards are Vue-rendered.
 
 Sight card internals keep the source order: `span.sight-kicker` (issue category, uppercase) →
-`img.sight-pin` (`/brand/svg/mark-amber.svg`, `alt=""`) → `h3` (issue title, single line with
-ellipsis as the source specifies) → `p` (dek, two-line clamp). `aria-label` is
-`Open issue 007 card` (from `hero.slider.card`). `data-sight-index` is `set * 5 + i`. Clicking or pressing Enter or Space
-selects and centres the card, exactly as the source. Navigation to the issue arrives with the
-Phase 3 article routes; until then the cards do not navigate.
+`img.sight-pin` (`/brand/svg/mark-amber.svg`, `alt=""`) → `h3` (issue title, two lines, clamped) →
+`p` (dek, two-line clamp; one line on phones). Each card is a link to `issue.path`, the same
+convention as the archive cards; the routes arrive with Phase 3.
 
 ## 6. Content: the `hero` block in `app.config.ts`
 
@@ -134,7 +129,7 @@ hero: {
       cta: { label: 'Read the latest issue', to: '#latest' },
     },
   },
-  slider: { label: 'Recent issues', prev: 'Previous issue', next: 'Next issue', card: 'Open issue {no} card' },
+  recent: { label: 'Recent issues' },
 },
 ```
 
@@ -198,7 +193,6 @@ export interface CinemaInput {
 export type CinemaVars = Record<string, string>   // '--title-y' → '-210px', …
 export interface CinemaFrame {
   vars: CinemaVars
-  controlsReady: boolean                                   // sightsControlsEnter > 0.98
   live: { intro: boolean, panel2: boolean, panel3: boolean } // opacity > 0.02
 }
 export function cinemaFrame(input: CinemaInput): CinemaFrame
@@ -207,7 +201,8 @@ export function cinemaFrame(input: CinemaInput): CinemaFrame
 `cinemaFrame` computes every derived value and every custom property from source §7 with the
 same formulas and the same `toFixed` precision (`--mx`/`--my` at 4 decimals; the others as
 the source writes them), plus one extra, `--sights-left` (delta 31). Under `reduceMotion` every
-pointer term uses 0 (delta 27). `controlsReady` is `sightsControlsEnter > 0.98`. `live` flags are
+pointer term uses 0 (delta 27). The controls segment and `--sights-controls-opacity` are gone with
+the slider (delta 33); the halves part `118vw` below 1100px (delta 35). `live` flags are
 true while the block's computed opacity exceeds 0.02; the component binds them as `.is-live`
 (§9 delta 24). The variable names are the source's, including `--sights-opacity` even though
 the CSS does not read it.
@@ -215,8 +210,8 @@ the CSS does not read it.
 ### 8.2 `useCinemaScroll(section, options)`
 
 ```ts
-useCinemaScroll(section: Ref<HTMLElement | null>, options: { onResize: () => void })
-  : { controlsReady: Ref<boolean>, live: Ref<CinemaFrame['live']> }
+useCinemaScroll(section: Ref<HTMLElement | null>)
+  : { live: Ref<CinemaFrame['live']> }
 ```
 
 - Client only: everything registers in `onMounted` and is removed in `onBeforeUnmount`,
@@ -225,10 +220,10 @@ useCinemaScroll(section: Ref<HTMLElement | null>, options: { onResize: () => voi
   0.14 with the 0.08 snap, pointer lerp 0.12, `initialized` and `rafPending` guards, the
   re-request conditions, `requestTick()`.
 - `reduceMotion` is `matchMedia('(prefers-reduced-motion: reduce)')`, read each frame.
-- Applies `frame.vars` with `section.style.setProperty` and sets `controlsReady` and `live`.
+- Applies `frame.vars` with `section.style.setProperty` and sets `live`.
 - Sets `data-settled` on the section: `"false"` whenever a frame is requested, `"true"` when
   `update()` ends without re-requesting one. `verify.mjs` waits on it; nothing else reads it.
-- Listeners: `scroll` passive → `requestTick`; `resize` → `options.onResize(); requestTick()`;
+- Listeners: `scroll` passive → `requestTick`; `resize` → `requestTick`;
   `pointermove` passive → target pointer from `clientX / innerWidth - 0.5` and
   `clientY / innerHeight - 0.5`, then `requestTick`.
 - Publishes `heroUnderNav`: each frame, `section.getBoundingClientRect().bottom > navH`, where
@@ -286,6 +281,9 @@ opacity 0, slider `visibility: hidden`, controls at opacity 0.
 | 28 | Loop normalisation only on `transitionend` | Also normalise immediately when the track's computed transition duration is 0 | Under `prefers-reduced-motion` (`transition: none`) no `transitionend` fires and ten clicks ran the track off its three sets |
 | 29 | All 15 cards `tabindex="0"`; `.stage`/`.world` `overflow: hidden` | Sets 0 and 2 get `tabindex="-1"` and `aria-hidden="true"`; `.stage` and `.world` use `overflow: clip` | Off-screen clones were tab stops, screen readers heard 15 cards for 5 issues, and focusing a clone scrolled the hidden-overflow stage sideways |
 | 30 | `.sight-card:focus-visible { outline: none }` | `outline: 2px solid var(--color-amber); outline-offset: 3px` | Keyboard users need a visible focus ring (WCAG 2.4.7) |
+| 33 | `section.sights-slider` with a three-set looping track and prev/next buttons | `div.sights-grid`: a static, centred 2×2 grid of the four newest issues as links; no controls, no loop; `--sights-left = −stackLeft / backScale` so the block starts at screen x = 0 and the grid centres with margins; cards `clamp(240px, 32vh, 300px)` tall with two-line titles at 28px; one column of `clamp(120px, 16vh, 150px)` cards below 640px | Qie (2026-09-25): "2×2, bigger, no horizontal scroll yet". Supersedes deltas 17–19, 28 and the 48px alignment in 31; delta 30's focus ring stays |
+| 34 | `.sights-slider { z-index: 2 }` under the mid-back layer (z 3) | `z-index: 4` | The source's mid-back cutout overlapping the cards was a depth effect; our cloud deck is a full band and hid the grid's second row |
+| 35 | Splitframes part ∓46vw at every width | ∓118vw below 1100px | The halves are short and low on narrow screens, so at 46vw their top and bottom bands sat mid-screen over panels two and three and the grid |
 | 32 | The foreground layer only translates and scales on exit | `--bridge-opacity: 1 − frame2.exit` on `.bridge-img` | A bottom-anchored photograph (the source's own geometry) cannot clear the stage by transform alone at 1440×900, so the wing faded out over the same exit segment leaves no remnant behind panel three or the slider |
 | 31 | `.sights-slider { left: 0; right: 0 }` | `left: var(--sights-left); right: auto; width: 100vw`, with `--sights-left = (48 + 0.18·W − stackLeft) / backScale`, `stackLeft = W/2 − 0.53·W·backScale` | The source solves the slider's vertical position against the scaled back stack but not the horizontal; the active card landed fully off-screen left and selecting a card slid it away. Now the active card sits at the controls' 48px |
 
@@ -304,25 +302,18 @@ the header is exactly what it is today. `transition: background-color, border-co
 
 The pill keeps `to="#subscribe"`. The id moves from the hero form to the band form.
 
-## 11. Slider (`useInfiniteSlider`)
+## 11. Recent issues grid (replaces the slider, delta 33)
 
-```ts
-useInfiniteSlider(track: Ref<HTMLElement | null>, count: number)
-  : { active: Ref<number>, jumping: Ref<boolean>, move(dir: 1 | -1): void,
-      select(index: number): void, update(): void, onTransitionEnd(event: TransitionEvent): void }
-```
-
-- `active` starts at `count` (middle set).
-- `update()` reads the first card's `offsetWidth` and the track's computed `columnGap`, sets
-  `--sights-shift` to `-(cardWidth + gap) * active` px on the track.
-- `move`, `select`, `jump` and `normalize` follow source §8. `jumping` is set true, `active`
-  and shift updated, then cleared after two `requestAnimationFrame`s.
-- The component binds `.is-active` to `index === active` and `.is-jumping` to `jumping`, and
-  calls `onTransitionEnd` from the track's `@transitionend`. The handler ignores events whose
-  target is not the track itself and does nothing when `count` is 0. `move` and `select` also
-  normalise immediately when the track's computed transition duration is 0 (delta 28). `jump` awaits `nextTick`
-  after setting `jumping` so `transition: none` is in the DOM before the track moves. `update()` also runs on mount and
-  is the `onResize` callback handed to `useCinemaScroll`.
+`HeroCinema` renders `props.issues` (the four newest, from `index.vue`) as `NuxtLink.sight-card`
+elements inside `div.sights-grid`, a two-column CSS grid `min(1120px, calc(100vw - 96px))` wide,
+centred with `margin: 0 auto` inside the `100vw`-wide `.sights-slider` block, which paints above the
+cloud deck (delta 34). The block keeps the source's fly-in (`--sights-enter-x`), visibility gate and
+`1 / backScale` counter-scale; its `left` is the per-frame `--sights-left` that cancels the scaled
+back stack's horizontal offset. Cards are `clamp(240px, 32vh, 300px)` tall with 28px padding, a
+two-line 28px title and a two-line dek; at ≤1100px they are `clamp(220px, 30vh, 280px)` with 24px
+titles; at ≤640px the grid is one column of `clamp(120px, 16vh, 150px)` cards with 18px titles and a
+one-line dek. Hover lifts a card 4px; `:focus-visible` shows the amber ring. There is no slider
+state, no composable and no controls.
 
 ## 12. Verification
 
@@ -339,9 +330,9 @@ pointer at 0, `reduceMotion: false` unless stated:
 | 1620 | `--bridge-y` `-804.4px` ± 1e-6 (progress 0.6 × −74 − 760), `--bridge-scale` 1.618 ± 1e-6, `--frame2-y` `calc(-50% + -150px)`, `--panel2-opacity` 0, `--frame2-opacity` 0 |
 | 2300 | `--panel3-opacity` 1, `--bazaar-saturation` 1.18, `--frame2-opacity` 0, `live.panel3` true, `live.panel2` false |
 | 3560 | `--sights-enter-x` `0vw`, `--sights-visibility` `visible`, `--back-scale` 1.3, `--sights-scale` parses to 1 / 1.3 ± 1e-9 |
-| 3660 | `--sights-controls-opacity` 1, `controlsReady` true; at 3600 `controlsReady` false |
 | any, pointer (0.3, -0.2), reduce | `--mx` `0.0000`, `--my` `0.0000`, `--back-x` `0px`, `--bridge-x` `calc(-50% + 0px)`, `--split-left-x` `calc(-50% + 0vw + 0px)` (delta 27) |
-| 3560, innerWidth 1440 / 390 | `--sights-left` 445.6615 / 147.623 ± 1e-3 (delta 31) |
+| 3560, innerWidth 1440 / 390 | `--sights-left` 209.3538 / 56.7000 ± 1e-3 (delta 31 as updated by 33); `--sights-controls-opacity` absent |
+| 1100, innerWidth 390 / 1440 | `--split-left-x` `calc(-50% + -118vw + 0px)` / `calc(-50% + -46vw + 0px)` (delta 35) |
 | 0 / 1100 / 1620 | `--bridge-opacity` `1` / `1` / `0` (delta 32) |
 | any, pointer (0.3, -0.2) | `--mx` `0.3000`, `--my` `-0.2000`, `--back-x` parses to −3.6 ± 1e-9, `--back-y` parses to 0.8 ± 1e-9 |
 
@@ -361,14 +352,17 @@ Plus `segmentInOut` unit checks (enter/exit/active at the boundaries) and the
   0 → title opacity 1, slider hidden, header transparent;
   1100 → title opacity 0, frame two ≥ 0.99, panel two ≥ 0.99;
   2300 → panel three ≥ 0.99, frame two ≤ 0.01;
-  3700 → slider visible, enter-x `0vw`, controls have `is-ready`, nav still transparent;
+  3700 → grid visible, enter-x `0vw`, nav still transparent;
   4700 → nav has the cream fill (the stage has left the nav).
-  Also at 3700: the active card's left edge is 48px and it is on screen; clicking card 7 brings it to
-  48px; exactly 5 cards are tabbable and 10 are `aria-hidden`; `.stage`/`.world` compute to
-  `overflow: clip`; tabbing from card 5 through 9 shows a focus outline and never scrolls the stage.
+  Also at 3700: exactly four `a.sight-card[href]`, every one fully inside the viewport, two distinct
+  tops and two distinct lefts, the grid's left and right margins equal within 2px, and a 1×1 clip
+  screenshot inside each card samples the cream card surface (the deck must not cover a row; a
+  hit test cannot see the `pointer-events: none` deck); none `aria-hidden`; `.stage`/`.world`
+  compute to `overflow: clip`; tabbing from the first card through the fourth follows issue order
+  with a visible outline and never scrolls the stage. A 390×844 context scrubs 1100 and 3700 and
+  asserts each window half's content region is off screen and, at 3700, four stacked cards on screen.
   At 0 every `img.scene-img` has decoded (`naturalWidth > 0`) and `--bridge-opacity` is 1; at 2300 it is 0.
-  Under reduced motion: six `next` clicks from 5 land on 6 (the loop normalised without
-  `transitionend`), and a pointer move leaves `--back-x` at `0px`.
+  Under reduced motion a pointer move leaves `--back-x` at `0px`.
 - The reduced-motion group is unchanged and must still pass: at rest with no pointer movement
   the page is static for one second.
 - Image loading is covered by the existing console-error capture; a missing layer file fails
@@ -385,10 +379,9 @@ Plus `segmentInOut` unit checks (enter/exit/active at the boundaries) and the
    fades in at top 60%, sliding +58px → −86px.
 3. 1760–2700px: the cloud deck gains +0.18 saturation while panel one exits; panel two fades
    in at top 29% with the same slide and its "Read the latest issue" pill.
-4. 2760–3560px: the issue slider flies in from 420vw, counter-scaled by 1 / backScale, top
-   solved so cards sit at `clamp(innerHeight × 0.19, 112, 220) − 50` px on screen.
-5. 3360–3660px: the ← → buttons fade in at left 48px and become interactive past 0.98. Prev,
-   next and card clicks slide the track with the 640ms curve and loop seamlessly.
+4. 2760–3560px: the 2×2 issue grid flies in from 420vw, counter-scaled by 1 / backScale, top
+   solved so cards sit at `clamp(innerHeight × 0.19, 112, 220) − 50` px on screen, centred.
+5. (Removed with delta 33: no slider controls or loop.)
 6. `SiteNav` is transparent while the stage sits under it and cream after.
 7. Under `prefers-reduced-motion`: values snap, pointer vars are 0, transitions off, the story
    still scrubs.

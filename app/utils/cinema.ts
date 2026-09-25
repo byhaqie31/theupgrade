@@ -40,16 +40,6 @@ export function nextSmoothScroll(current: number, target: number, initialized: b
   return Math.abs(next - target) < 0.08 ? target : next
 }
 
-/**
- * Source §8 `normalizeSightSlider`: after a transition ends, the index to jump
- * to without animation so the three-set track loops, or null to stay put.
- */
-export function normalizeSightIndex(active: number, count: number): number | null {
-  if (active >= count * 2) return active - count
-  if (active < count) return active + count
-  return null
-}
-
 export interface CinemaInput {
   /** Smoothed scroll distance into the section, 0..3700. */
   scroll: number
@@ -71,8 +61,6 @@ export interface CinemaLive {
 
 export interface CinemaFrame {
   vars: CinemaVars
-  /** Source: `sightsControlsEnter > 0.98`. */
-  controlsReady: boolean
   /** Block opacity above 0.02: the block may take clicks and focus. */
   live: CinemaLive
 }
@@ -84,10 +72,11 @@ export function cinemaFrame({ scroll, mouseX, mouseY, innerWidth, innerHeight, r
   const introExit = smoothstep(90, 650, scroll)
   const sightsEnterRaw = smoothstep(2760, 3560, scroll)
   const sightsEnter = Math.pow(sightsEnterRaw, 1.55)
-  const sightsControlsEnter = smoothstep(3360, 3660, scroll)
   const blurActive = clamp(frame2.active + frame3.active)
   const frame2Opacity = frame2.active * (1 - frame3.enter)
   const splitDrift = Math.pow(frame2.enter, 1.5)
+  // Delta 35: below 1100px the halves are short and sit low, so 46vw leaves their bands mid-screen; 118vw clears them.
+  const partVw = innerWidth < 1100 ? 118 : 46
   const panel2Opacity = frame2.active * (1 - frame2.exit)
   const panel3Opacity = frame3.active * (1 - frame3.exit)
   const backScale = 0.76 + progress * 0.2 + frame2.enter * 0.18 + frame3.enter * 0.16
@@ -101,10 +90,10 @@ export function cinemaFrame({ scroll, mouseX, mouseY, innerWidth, innerHeight, r
   const mx = reduceMotion ? 0 : mouseX
   const my = reduceMotion ? 0 : mouseY
   // Horizontal counterpart of sightsParentTop (delta 31): the back stack spans -3vw..103vw and is scaled
-  // about its centre, which shifts the slider origin; solve `left` so the active card, after the track's
-  // -18vw, lands at the controls' 48px.
+  // about its centre, which shifts the grid block's origin; solve `left` so that origin sits at screen x = 0
+  // and the grid can centre itself with plain margins.
   const stackLeft = innerWidth / 2 - 0.53 * innerWidth * backScale
-  const sightsParentLeft = (48 + 0.18 * innerWidth - stackLeft) / backScale
+  const sightsParentLeft = -stackLeft / backScale
 
   const vars: CinemaVars = {
     '--mx': mx.toFixed(4),
@@ -140,10 +129,10 @@ export function cinemaFrame({ scroll, mouseX, mouseY, innerWidth, innerHeight, r
     // Delta 32: fade the foreground over its exit; a bottom-anchored photo cannot clear the stage by transform alone.
     '--bridge-opacity': String(1 - frame2.exit),
 
-    '--split-left-x': `calc(-50% + ${-splitDrift * 46}vw + ${mx * 22}px)`,
+    '--split-left-x': `calc(-50% + ${-splitDrift * partVw}vw + ${mx * 22}px)`,
     '--split-left-y': `${my * 10 + sharedHeroY - splitDrift * 180}px`,
     '--split-left-scale': String(1 + sharedHeroScale + frame2.enter * 0.74),
-    '--split-right-x': `calc(-50% + ${splitDrift * 46}vw + ${mx * 22}px)`,
+    '--split-right-x': `calc(-50% + ${splitDrift * partVw}vw + ${mx * 22}px)`,
     '--split-right-y': `${my * 10 + sharedHeroY - splitDrift * 180}px`,
     '--split-right-scale': String(1 + sharedHeroScale + frame2.enter * 0.74),
 
@@ -160,7 +149,6 @@ export function cinemaFrame({ scroll, mouseX, mouseY, innerWidth, innerHeight, r
     '--panel3-y': `calc(-50% + ${-frame3.exit * 86 + (1 - frame3.enter) * 58}px)`,
 
     '--sights-opacity': String(sightsEnter),
-    '--sights-controls-opacity': String(sightsControlsEnter),
     '--sights-visibility': sightsEnter > 0.01 ? 'visible' : 'hidden',
     '--sights-y': '0px',
     '--sights-enter-x': `${(1 - sightsEnter) * 420}vw`,
@@ -172,7 +160,6 @@ export function cinemaFrame({ scroll, mouseX, mouseY, innerWidth, innerHeight, r
 
   return {
     vars,
-    controlsReady: sightsControlsEnter > 0.98,
     live: {
       intro: introOpacity > 0.02,
       panel2: panel2Opacity > 0.02,

@@ -7,8 +7,7 @@ import { cinemaFrame, clamp, lerp, nextSmoothScroll } from '~/utils/cinema'
  * section element (not :root). Also publishes whether the stage still sits
  * under the nav, and a `data-settled` flag the verify script waits on.
  */
-export function useCinemaScroll(section: Ref<HTMLElement | null>, options: { onResize: () => void }) {
-  const controlsReady = ref(false)
+export function useCinemaScroll(section: Ref<HTMLElement | null>) {
   const live = ref<CinemaLive>({ intro: true, panel2: false, panel3: false })
   const underNav = useHeroUnderNav()
 
@@ -44,7 +43,6 @@ export function useCinemaScroll(section: Ref<HTMLElement | null>, options: { onR
     const frame = cinemaFrame({ scroll: smoothScroll, mouseX, mouseY, innerWidth: window.innerWidth, innerHeight: window.innerHeight, reduceMotion: reduce })
     for (const [name, value] of Object.entries(frame.vars)) el.style.setProperty(name, value)
 
-    if (controlsReady.value !== frame.controlsReady) controlsReady.value = frame.controlsReady
     const l = live.value
     if (l.intro !== frame.live.intro || l.panel2 !== frame.live.panel2 || l.panel3 !== frame.live.panel3) {
       live.value = frame.live
@@ -68,10 +66,7 @@ export function useCinemaScroll(section: Ref<HTMLElement | null>, options: { onR
   }
 
   const onScroll = () => requestTick()
-  const onResize = () => {
-    options.onResize()
-    requestTick()
-  }
+  const onResize = () => requestTick()
   const onPointerMove = (event: PointerEvent) => {
     targetMouseX = event.clientX / window.innerWidth - 0.5
     targetMouseY = event.clientY / window.innerHeight - 0.5
@@ -95,5 +90,5 @@ export function useCinemaScroll(section: Ref<HTMLElement | null>, options: { onR
     rafPending = false
   })
 
-  return { controlsReady, live }
+  return { live }
 }

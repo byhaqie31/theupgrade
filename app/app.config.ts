@@ -41,12 +41,7 @@ export default defineAppConfig({
         cta: { label: 'Read the latest issue', to: '#latest' },
       },
     },
-    slider: {
-      label: 'Recent issues',
-      prev: 'Previous issue',
-      next: 'Next issue',
-      card: 'Open issue {no} card',
-    },
+    recent: { label: 'Recent issues' },
   },
   // Programmes covered, in marquee order.
   programmes: [

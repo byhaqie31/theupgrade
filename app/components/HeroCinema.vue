@@ -2,7 +2,7 @@
 import type { Issue } from '~/composables/useIssues'
 
 const props = defineProps<{
-  /** Newest first; the slider shows these in three looping sets. */
+  /** Newest first; the grid shows up to four. */
   issues: Issue[]
   /** Total issue count for the "issues and counting" fact. */
   issueCount: number
@@ -19,20 +19,7 @@ onBeforeUnmount(() => {
 })
 
 const section = ref<HTMLElement | null>(null)
-const track = ref<HTMLElement | null>(null)
-
-const count = props.issues.length
-// Three identical sets so the track loops without a seam (source spec §8).
-// Only the middle set is reachable by keyboard and assistive tech; sets 0 and 2 are visual clones.
-const cards = [0, 1, 2].flatMap(set => props.issues.map((issue, i) => ({
-  issue,
-  set,
-  index: set * count + i,
-  key: `${set}-${issue.issueNo}`,
-})))
-
-const { active, jumping, move, select, update, onTransitionEnd } = useInfiniteSlider(track, count)
-const { controlsReady, live } = useCinemaScroll(section, { onResize: update })
+const { live } = useCinemaScroll(section)
 
 const facts = hero.panels.maths.facts.map(fact => ({
   ...fact,
@@ -43,10 +30,6 @@ const facts = hero.panels.maths.facts.map(fact => ({
 
 const storyLabel = `${site.name} cinematic scroll story`
 const overviewLabel = `${site.name} overview`
-
-function cardLabel(issue: Issue) {
-  return hero.slider.card.replace('{no}', formatIssueNo(issue.issueNo))
-}
 </script>
 
 <template>
@@ -74,37 +57,25 @@ function cardLabel(issue: Issue) {
 
           <section
             class="sights-slider"
-            :aria-label="hero.slider.label"
+            :aria-label="hero.recent.label"
           >
-            <div
-              ref="track"
-              class="sights-track"
-              :class="{ 'is-jumping': jumping }"
-              @transitionend="onTransitionEnd"
-            >
-              <article
-                v-for="card in cards"
-                :key="card.key"
+            <div class="sights-grid">
+              <NuxtLink
+                v-for="issue in issues"
+                :key="issue.issueNo"
                 class="sight-card"
-                :class="{ 'is-active': card.index === active }"
-                :data-sight-index="card.index"
-                :tabindex="card.set === 1 ? 0 : -1"
-                :aria-hidden="card.set === 1 ? undefined : 'true'"
-                role="button"
-                :aria-label="cardLabel(card.issue)"
-                @click="select(card.index)"
-                @keydown.enter.prevent="select(card.index)"
-                @keydown.space.prevent="select(card.index)"
+                :to="issue.path"
+                :data-issue-no="issue.issueNo"
               >
-                <span class="sight-kicker">{{ card.issue.category }}</span>
+                <span class="sight-kicker">{{ issue.category }}</span>
                 <img
                   class="sight-pin"
                   src="/brand/svg/mark-amber.svg"
                   alt=""
                 >
-                <h3>{{ card.issue.title }}</h3>
-                <p>{{ card.issue.dek }}</p>
-              </article>
+                <h3>{{ issue.title }}</h3>
+                <p>{{ issue.dek }}</p>
+              </NuxtLink>
             </div>
           </section>
 
@@ -113,31 +84,6 @@ function cardLabel(issue: Issue) {
             src="/img/hero/horizon.webp"
             alt=""
           >
-        </div>
-
-        <div
-          class="sights-controls"
-          :class="{ 'is-ready': controlsReady }"
-          aria-label="Slider controls"
-        >
-          <button
-            type="button"
-            class="sight-nav sight-prev"
-            :aria-label="hero.slider.prev"
-            :disabled="!controlsReady"
-            @click="move(-1)"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            class="sight-nav sight-next"
-            :aria-label="hero.slider.next"
-            :disabled="!controlsReady"
-            @click="move(1)"
-          >
-            →
-          </button>
         </div>
 
         <h1 class="hero-title">
@@ -275,11 +221,9 @@ function cardLabel(issue: Issue) {
   --panel3-opacity: 0;
   --panel3-y: calc(-50% + 58px);
   --sights-opacity: 0;
-  --sights-controls-opacity: 0;
   --sights-y: 0px;
   --sights-enter-x: 420vw;
   --sights-visibility: hidden;
-  --sights-shift: 0px;
   --sights-scale: 1;
   --sights-top: clamp(112px, 19vh, 220px);
   --sights-screen-top: clamp(112px, 19vh, 220px);
@@ -310,7 +254,6 @@ function cardLabel(issue: Issue) {
 .shade,
 .scene-img,
 .sights-slider,
-.sights-controls,
 .hero-title,
 .intro-copy,
 .story-panel {
@@ -388,13 +331,12 @@ function cardLabel(issue: Issue) {
   transform: translate3d(-50%, calc(var(--four-y) - 110px), 0) scale(var(--four-scale));
 }
 
-/* ── Slider ── */
+/* ── Recent issues grid (delta 33: the source's slider is a static 2×2 grid) ── */
 .sights-slider {
-  left: var(--sights-left); /* solved per frame, like top (delta 31) */
-  right: auto;
-  width: 100vw;
+  left: var(--sights-left); /* cancels the scaled back stack's offset, solved per frame (delta 31) */
   top: var(--sights-top);
-  z-index: 2;
+  z-index: 4; /* above the cloud deck (z 3); the source's z 2 let its mid-back cutout overlap the cards (delta 34) */
+  width: 100vw;
   padding: 0;
   opacity: 1; /* the fade is visibility + X translate, not opacity */
   visibility: var(--sights-visibility);
@@ -404,47 +346,37 @@ function cardLabel(issue: Issue) {
   will-change: transform;
 }
 
-.sights-track {
-  display: flex;
-  gap: clamp(16px, 1.15vw, 24px);
-  align-items: stretch;
-  transform: translate3d(calc(var(--sights-shift) - 18vw), 0, 0);
-  transition: transform 640ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-
-.sights-track.is-jumping {
-  transition: none;
+.sights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: min(1120px, calc(100vw - 96px));
+  margin: 0 auto;
 }
 
 .sight-card {
   position: relative;
-  flex: 0 0 clamp(360px, 19.4vw, 430px);
-  height: 220px;
-  padding: 24px;
+  display: block;
+  height: clamp(240px, 32vh, 300px);
+  padding: 28px;
   overflow: hidden;
   border: 1px solid color-mix(in oklab, var(--color-paper) 42%, transparent);
   border-radius: 24px;
   color: var(--color-ink);
   background: var(--color-paper);
   box-shadow: 0 18px 52px rgba(60, 40, 15, 0.12);
-  backdrop-filter: none;
-  cursor: pointer;
-  pointer-events: auto;
-  user-select: none;
+  text-decoration: none;
+  transition: transform 350ms ease, box-shadow 350ms ease;
 }
 
-.sight-card::before,
-.sight-card::after {
-  content: none;
-}
-
-.sight-card.is-active {
-  outline: none;
+.sight-card:hover {
+  color: var(--color-ink);
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px rgba(60, 40, 15, 0.18);
 }
 
 .sight-card:focus-visible {
-  outline: 2px solid var(--color-amber); /* the source removed the ring; keyboard users need one (delta 30) */
+  outline: 2px solid var(--color-amber); /* keyboard users need a ring (delta 30) */
   outline-offset: 3px;
 }
 
@@ -458,7 +390,6 @@ function cardLabel(issue: Issue) {
 
 .sight-kicker {
   display: block;
-  margin-bottom: 56px;
   color: var(--color-ink);
   font-size: 12px;
   font-weight: 500;
@@ -468,8 +399,8 @@ function cardLabel(issue: Issue) {
 
 .sight-pin {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: 28px;
+  right: 28px;
   width: 67.2px;
   height: 67.2px;
   pointer-events: none;
@@ -477,28 +408,27 @@ function cardLabel(issue: Issue) {
 
 .sight-card h3 {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: calc(24px + (16px * 1.16 * 2) + 12px);
-  max-width: calc(100% - 76px);
+  left: 28px;
+  right: 28px;
+  bottom: calc(28px + (16px * 1.16 * 2) + 14px);
   margin: 0;
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 24px;
-  font-weight: 700; /* the source's 800; Satoshi tops out at 700 (delta 6) */
-  line-height: 0.95;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.05;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sight-card p {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 24px;
-  max-width: 100%;
-  margin: 12px 0 0;
+  left: 28px;
+  right: 28px;
+  bottom: 28px;
+  margin: 0;
   color: var(--color-ink);
   font-size: 16px;
   font-weight: 400;
@@ -508,39 +438,6 @@ function cardLabel(issue: Issue) {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.sights-controls {
-  left: 48px;
-  right: auto;
-  top: calc(var(--sights-screen-top) + 220px + 16px);
-  z-index: 5;
-  display: flex;
-  justify-content: flex-start;
-  gap: 14px;
-  opacity: var(--sights-controls-opacity);
-  transform: translate3d(0, var(--sights-y), 0);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-.sights-controls.is-ready {
-  pointer-events: auto;
-}
-
-.sight-nav {
-  width: 54px;
-  height: 54px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 999px;
-  color: var(--color-ink);
-  background: color-mix(in oklab, var(--color-paper) 94%, transparent);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.2);
-  font: inherit;
-  cursor: pointer;
 }
 
 /* ── Title and foreground layers ── */
@@ -781,7 +678,11 @@ function cardLabel(issue: Issue) {
   .story-panel h2 { font-size: 3.2rem; }
   .facts { gap: 34px; margin-top: 44px; }
   .facts dt { font-size: 3.2rem; }
-  .sight-card { flex-basis: clamp(320px, 40vw, 390px); min-height: 178px; }
+  .sights-grid { width: calc(100vw - 64px); gap: 16px; }
+  .sight-card { height: clamp(220px, 30vh, 280px); padding: 24px; }
+  .sight-pin { top: 24px; right: 24px; }
+  .sight-card h3 { left: 24px; right: 24px; font-size: 24px; }
+  .sight-card p { left: 24px; right: 24px; }
 }
 
 @media (max-width: 640px) {
@@ -798,14 +699,11 @@ function cardLabel(issue: Issue) {
   .story-panel h2 { font-size: 2.45rem; }
   .facts { gap: 18px; margin-top: 34px; }
   .facts dt { font-size: 2.5rem; }
-  .sights-slider { padding: 0; }
-  .sights-track { gap: 12px; transform: translate3d(calc(var(--sights-shift) - 18vw), 0, 0); }
-  .sight-card { flex-basis: min(82vw, 330px); height: 220px; padding: 24px; border-radius: 24px; }
-  .sights-controls { top: calc(var(--sights-screen-top) + 236px); }
-  .sight-card h3 { max-width: 78%; }
-  .sight-card p { max-width: 100%; margin-top: 10px; }
-  .sight-kicker { margin-bottom: 56px; }
-  .sight-pin { top: 24px; right: 24px; width: 57.6px; height: 57.6px; }
+  .sights-grid { grid-template-columns: 1fr; gap: 12px; width: calc(100vw - 32px); }
+  .sight-card { height: clamp(120px, 16vh, 150px); padding: 18px; border-radius: 20px; }
+  .sight-pin { top: 18px; right: 18px; width: 40px; height: 40px; }
+  .sight-card h3 { left: 18px; right: 64px; bottom: calc(18px + 14px * 1.16 + 10px); font-size: 18px; }
+  .sight-card p { left: 18px; right: 18px; bottom: 18px; font-size: 14px; max-height: 1.16em; -webkit-line-clamp: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -814,8 +712,8 @@ function cardLabel(issue: Issue) {
   .hero-title,
   .intro-copy,
   .story-panel,
-  .sights-track,
-  .sights-slider {
+  .sights-slider,
+  .sight-card {
     transition: none;
   }
 }
