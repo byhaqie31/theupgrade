@@ -12,7 +12,10 @@
           Linger over <em>the good seats.</em>
         </h2>
       </div>
-      <SubscribeForm variant="dark" />
+      <SubscribeForm
+        id="subscribe"
+        variant="dark"
+      />
     </div>
   </section>
 </template>

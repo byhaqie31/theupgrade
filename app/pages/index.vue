@@ -1,10 +1,15 @@
 <script setup lang="ts">
+definePageMeta({ cinematicHero: true })
+
 const { featured, recent, all } = await useIssues()
 </script>
 
 <template>
   <div>
-    <HeroStage :issue-no="featured?.issueNo ?? 0" />
+    <HeroCinema
+      :issues="all.slice(0, 5)"
+      :issue-count="all.length"
+    />
 
     <ProgrammeMarquee />
 

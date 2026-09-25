@@ -7,8 +7,9 @@
  * playwright-core and the machine's installed Chromium:
  *   1. screenshots / at 390x844, 820x1180, 1440x900 (+ full page at 390 and 1440)
  *   2. flags any element whose right edge passes the viewport width
- *   3. checks the hero headline, lede and subscribe field fit inside the hero at 390
- *   4. confirms the page is static under prefers-reduced-motion (marquee included)
+ *   3. checks at 390 that the cinematic hero's title sits above the intro block and the intro fits the stage
+ *   4. scrubs the pinned story at 1440x900 (0, 1100, 2300, 3700, 4700) and asserts the engine state and nav
+ *   5. confirms the page is static under prefers-reduced-motion (marquee included)
  *
  * No browser is downloaded. playwright-core is pinned to the version whose
  * Chromium revision is already in ~/Library/Caches/ms-playwright.
@@ -113,19 +114,24 @@ const OVERFLOW_CHECK = () => {
   return { innerWidth: window.innerWidth, scrollWidth: document.documentElement.scrollWidth, flagged }
 }
 
+/** Scroll-zero layout of the cinematic stage: title above the intro block, intro and field inside the stage. */
 const HERO_CHECK = () => {
-  const hero = document.querySelector('section > div.min-h-\\(--hero-min\\)') ?? document.querySelector('main section:first-of-type > div')
-  const h1 = document.querySelector('h1')
-  const lede = h1?.nextElementSibling
-  const field = document.querySelector('#subscribe input')?.parentElement
+  const stage = document.querySelector('.cinema-scroll .stage')
+  const title = document.querySelector('.hero-title')
+  const intro = document.querySelector('.intro-copy')
+  const field = document.querySelector('.intro-copy input')?.parentElement
   const box = el => el ? el.getBoundingClientRect() : null
-  const H = box(hero)
-  const minH = hero ? parseFloat(getComputedStyle(hero).minHeight) : null
+  const S = box(stage)
+  const T = box(title)
+  const I = box(intro)
+  const F = box(field)
   return {
-    heroTop: H?.top, heroBottom: Math.round(H?.bottom ?? 0), heroHeight: Math.round(H?.height ?? 0), heroMinHeight: minH,
-    h1Bottom: Math.round(box(h1)?.bottom ?? -1),
-    ledeBottom: Math.round(box(lede)?.bottom ?? -1),
-    fieldBottom: Math.round(box(field)?.bottom ?? -1),
+    stageHeight: Math.round(S?.height ?? 0),
+    stageBottom: Math.round(S?.bottom ?? 0),
+    titleBottom: Math.round(T?.bottom ?? -1),
+    introTop: Math.round(I?.top ?? -1),
+    introBottom: Math.round(I?.bottom ?? -1),
+    fieldBottom: Math.round(F?.bottom ?? -1),
     viewportHeight: window.innerHeight,
   }
 }
@@ -139,6 +145,46 @@ const FONT_CHECK = async () => {
     bodyFamily: getComputedStyle(document.body).fontFamily,
     externalFontLinks: [...document.querySelectorAll('link[href*="fontshare"], link[href*="googleapis"], link[href*="gstatic"]')].length,
   }
+}
+
+/** Positions through the 3700px pinned story at 1440x900 (section height 4600). */
+const SCRUB_POSITIONS = [0, 1100, 2300, 3700, 4700]
+
+const SCRUB_CHECK = () => {
+  const section = document.querySelector('.cinema-scroll')
+  const cs = getComputedStyle(section)
+  const v = name => cs.getPropertyValue(name).trim()
+  const header = document.querySelector('header')
+  const hidden = el => el ? getComputedStyle(el).visibility === 'hidden' : null
+  return {
+    scrollY: Math.round(window.scrollY),
+    titleOpacity: parseFloat(v('--title-opacity')),
+    frame2: parseFloat(v('--frame2-opacity')),
+    bridgeOpacity: parseFloat(v('--bridge-opacity')),
+    imagesDecoded: [...document.querySelectorAll('img.scene-img')].every(i => i.complete && i.naturalWidth > 0),
+    panel2: parseFloat(v('--panel2-opacity')),
+    panel3: parseFloat(v('--panel3-opacity')),
+    sightsVisibility: v('--sights-visibility'),
+    sightsEnterX: v('--sights-enter-x'),
+    controlsReady: document.querySelector('.sights-controls').classList.contains('is-ready'),
+    controlsDisabled: [...document.querySelectorAll('.sight-nav')].every(b => b.disabled),
+    cardsHidden: [...document.querySelectorAll('.sight-card')].every(hidden),
+    introHidden: hidden(document.querySelector('.intro-copy')),
+    noteHidden: hidden(document.querySelector('.note-button')),
+    headerBg: getComputedStyle(header).backgroundColor,
+    activeCard: document.querySelector('.sight-card.is-active')?.dataset.sightIndex ?? null,
+  }
+}
+
+const TRANSPARENT = 'rgba(0, 0, 0, 0)'
+const SCRUB_EXPECT = {
+  0: r => r.titleOpacity === 1 && r.sightsVisibility === 'hidden' && r.headerBg === TRANSPARENT && r.bridgeOpacity === 1 && r.imagesDecoded
+    && r.cardsHidden && r.controlsDisabled && r.noteHidden && r.introHidden === false,
+  1100: r => r.titleOpacity === 0 && r.frame2 >= 0.99 && r.panel2 >= 0.99 && r.introHidden,
+  2300: r => r.panel3 >= 0.99 && r.frame2 <= 0.01 && r.noteHidden === false && r.bridgeOpacity === 0,
+  3700: r => r.sightsVisibility === 'visible' && r.sightsEnterX === '0vw' && r.controlsReady
+    && r.headerBg === TRANSPARENT && r.activeCard === '5',
+  4700: r => r.headerBg !== TRANSPARENT,
 }
 
 async function main() {
@@ -176,12 +222,102 @@ async function main() {
       if (errors.length) failures++
       if (entry.hero) {
         const h = entry.hero
-        const fits = h.h1Bottom <= h.heroBottom && h.ledeBottom <= h.heroBottom && h.fieldBottom <= h.heroBottom
-        const withinMin = h.heroHeight <= Math.ceil(h.heroMinHeight) + 1
+        const fits = h.titleBottom < h.introTop
+          && h.introBottom <= h.stageBottom
+          && h.fieldBottom <= h.stageBottom
+          && h.stageHeight >= 640
         entry.hero.fits = fits
-        entry.hero.withinMinHeight = withinMin
-        if (!fits || !withinMin) failures++
+        if (!fits) failures++
       }
+      await context.close()
+    }
+
+    // Scrub the pinned story at 1440x900 with normal motion; wait for the engine to settle at each stop.
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+      const page = await context.newPage()
+      const errors = []
+      page.on('pageerror', e => errors.push(String(e)))
+      await page.goto(base + '/', { waitUntil: 'networkidle' })
+      await page.evaluate(() => document.fonts.ready)
+      report.scrub = {}
+      for (const y of SCRUB_POSITIONS) {
+        await page.evaluate((top) => {
+          document.querySelector('.cinema-scroll').dataset.settled = 'false'
+          window.scrollTo(0, top)
+          // scrollTo fires no event when the position is unchanged (the first stop is 0); wake the engine anyway.
+          window.dispatchEvent(new Event('scroll'))
+        }, y)
+        await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
+        await page.waitForTimeout(100)
+        await page.screenshot({ path: join(OUT, `1440-scroll-${y}.png`) })
+        const result = await page.evaluate(SCRUB_CHECK)
+        result.ok = SCRUB_EXPECT[y](result)
+        report.scrub[y] = result
+        if (!result.ok) failures++
+      }
+      // One slider step: the next card becomes active after the 640ms slide.
+      await page.click('.sight-next')
+      await page.waitForTimeout(800)
+      const afterNext = await page.evaluate(SCRUB_CHECK)
+      report.scrub.afterNext = { activeCard: afterNext.activeCard, ok: afterNext.activeCard === '6' }
+      if (!report.scrub.afterNext.ok) failures++
+      // The active card must sit on screen at the controls' left edge (48px), and selecting a card brings it there.
+      // The back stack (slider included) drifts up to 6px with the pointer by design, so park the pointer at the centre first.
+      const centrePointer = async () => {
+        await page.evaluate(() => { document.querySelector('.cinema-scroll').dataset.settled = 'false' })
+        await page.mouse.move(720, 450)
+        await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
+      }
+      await centrePointer()
+      const landing = await page.evaluate(() => {
+        const el = document.querySelector('.sight-card.is-active')
+        const r = el.getBoundingClientRect()
+        return { index: el.dataset.sightIndex, left: Math.round(r.left), right: Math.round(r.right), innerWidth: window.innerWidth }
+      })
+      landing.ok = Math.abs(landing.left - 48) <= 1 && landing.right <= landing.innerWidth
+      report.scrub.landing = landing
+      if (!landing.ok) failures++
+      await page.click('.sight-card[data-sight-index="7"]')
+      await page.waitForTimeout(800)
+      await centrePointer()
+      const selected = await page.evaluate(() => {
+        const el = document.querySelector('.sight-card[data-sight-index="7"]')
+        return { active: el.classList.contains('is-active'), left: Math.round(el.getBoundingClientRect().left) }
+      })
+      selected.ok = selected.active && Math.abs(selected.left - 48) <= 1
+      report.scrub.selected = selected
+      if (!selected.ok) failures++
+      // Keyboard: only the middle set is tabbable, focus is visible, and tabbing never scrolls the clipped stage.
+      const focusable = await page.evaluate(() => ({
+        tabbable: document.querySelectorAll('.sight-card[tabindex="0"]').length,
+        ariaHidden: document.querySelectorAll('.sight-card[aria-hidden="true"]').length,
+        worldOverflow: getComputedStyle(document.querySelector('.world')).overflow,
+        stageOverflow: getComputedStyle(document.querySelector('.stage')).overflow,
+      }))
+      await page.focus('.sight-card[data-sight-index="5"]')
+      const tabs = []
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('Tab')
+        tabs.push(await page.evaluate(() => {
+          const el = document.activeElement
+          return {
+            focused: el?.dataset?.sightIndex ?? String(el?.className ?? '').slice(0, 24),
+            outline: el ? getComputedStyle(el).outlineStyle : null,
+            worldScrollLeft: document.querySelector('.world').scrollLeft,
+            stageScrollLeft: document.querySelector('.stage').scrollLeft,
+          }
+        }))
+      }
+      const keyboard = { ...focusable, tabs }
+      keyboard.ok = focusable.tabbable === 5 && focusable.ariaHidden === 10
+        && focusable.worldOverflow === 'clip' && focusable.stageOverflow === 'clip'
+        && tabs.slice(0, 4).every((t, i) => t.focused === String(6 + i) && t.outline !== 'none' && t.worldScrollLeft === 0 && t.stageScrollLeft === 0)
+        && tabs[4].focused !== '10'
+      report.scrub.keyboard = keyboard
+      if (!keyboard.ok) failures++
+      report.scrub.errors = errors
+      if (errors.length) failures++
       await context.close()
     }
 
@@ -203,6 +339,31 @@ async function main() {
       const identical = Buffer.compare(a, b) === 0
       report.reducedMotion = { ...anim, staticAcrossOneSecond: identical }
       if (anim.animationName !== 'none' || !identical) failures++
+      // With transitions off the loop must still normalise (no transitionend arrives): 6 × next from 5 lands on 6.
+      await page.evaluate(() => {
+        document.querySelector('.cinema-scroll').dataset.settled = 'false'
+        window.scrollTo(0, 3700)
+        window.dispatchEvent(new Event('scroll'))
+      })
+      await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
+      for (let i = 0; i < 6; i++) {
+        await page.click('.sight-next')
+        await page.waitForTimeout(80)
+      }
+      await page.waitForTimeout(300)
+      const loop = await page.evaluate(() => document.querySelector('.sight-card.is-active')?.dataset.sightIndex ?? null)
+      report.reducedMotion.loopAfterSixNext = loop
+      if (loop !== '6') failures++
+      // And the pointer must not move any layer.
+      await page.evaluate(() => { document.querySelector('.cinema-scroll').dataset.settled = 'false' })
+      await page.mouse.move(100, 100)
+      await page.waitForFunction(() => document.querySelector('.cinema-scroll')?.dataset.settled === 'true')
+      const pointer = await page.evaluate(() => {
+        const cs = getComputedStyle(document.querySelector('.cinema-scroll'))
+        return { backX: cs.getPropertyValue('--back-x').trim(), bridgeX: cs.getPropertyValue('--bridge-x').trim() }
+      })
+      report.reducedMotion.pointer = pointer
+      if (pointer.backX !== '0px' || pointer.bridgeX !== 'calc(-50% + 0px)') failures++
       await context.close()
     }
   }

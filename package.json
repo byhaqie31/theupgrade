@@ -14,7 +14,8 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "lint": "eslint .",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "test": "node --test 'tests/**/*.test.ts'"
   },
   "dependencies": {
     "@nuxt/content": "^3.16.0",

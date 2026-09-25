@@ -21,6 +21,33 @@ export default defineAppConfig({
     thanks: 'Nice. The next issue lands in your inbox.',
     error: 'That did not go through. Try again in a moment.',
   },
+  // Cinematic hero. Panels are named, not an array, so each keeps its own shape.
+  hero: {
+    title: 'The Upgrade',
+    intro: { lead: 'Status, strategy, and the stays', em: 'worth the miles.' },
+    tagsLabel: 'What you get',
+    panels: {
+      maths: {
+        heading: 'The maths first, then the moment.',
+        body: 'A letter for people who chase elite status from KUL and want the maths and the moment. Which tier is worth it, which stays justify it, and what to do with the points you already have.',
+        facts: [
+          { of: 'issues', label: 'issues and counting' },
+          { of: 'programmes', label: 'programmes covered' },
+        ] as { of: 'issues' | 'programmes', label: string }[],
+      },
+      letter: {
+        heading: 'Fortnightly from Kuala Lumpur.',
+        body: 'A fortnightly letter from Kuala Lumpur on elite status, loyalty strategy and the hotels and cabins that justify the chase.',
+        cta: { label: 'Read the latest issue', to: '#latest' },
+      },
+    },
+    slider: {
+      label: 'Recent issues',
+      prev: 'Previous issue',
+      next: 'Next issue',
+      card: 'Open issue {no} card',
+    },
+  },
   // Programmes covered, in marquee order.
   programmes: [
     'Enrich',

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-const props = defineProps<{ variant: 'hero' | 'dark' }>()
+const props = withDefaults(defineProps<{
+  variant: 'hero' | 'dark'
+  /** Render the mono "Free · Fortnightly · …" row. The cinematic hero shows those words as pills instead. */
+  meta?: boolean
+}>(), { meta: true })
 
 const { subscribe } = useAppConfig()
 const { status, submit } = useSubscribe()
@@ -68,6 +72,7 @@ function onSubmit() {
       </div>
 
       <div
+        v-if="props.meta"
         class="meta flex flex-wrap gap-3.5 font-mono text-[11px] uppercase tracking-[.1em]"
         :class="ui.meta"
       >

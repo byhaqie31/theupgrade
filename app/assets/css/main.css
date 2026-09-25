@@ -53,6 +53,7 @@
 
 /* Fluid sizes, rhythm and container. Kept out of @theme on purpose. */
 :root {
+  --nav-h: 68px;
   --gutter: clamp(16px, 4vw, 56px);
   --max: 1280px;
   --section-y: clamp(64px, 9vw, 128px);
