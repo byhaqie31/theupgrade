@@ -541,7 +541,11 @@ const overviewLabel = `${site.name} overview`
 .intro-copy p em {
   font-style: italic;
   font-weight: 400;
-  color: var(--color-amber-bright);
+  /* Deep amber-brown: the amber tokens sit mid-tone between the cloud tops and their shadows and
+     vanish there (Qie, 2026-09-25). A faint cream halo replaces the lead's dark shadow so the dark
+     text still lifts off the darker folds. */
+  color: color-mix(in oklab, var(--color-amber) 35%, var(--color-ink));
+  text-shadow: 0 1px 14px rgba(246, 239, 225, 0.6);
 }
 
 .hero-tags {

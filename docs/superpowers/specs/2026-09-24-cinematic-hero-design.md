@@ -135,8 +135,10 @@ hero: {
 
 Fact values are resolved by the component: `issues` → `formatIssueNo(issueCount)` ("007"),
 `programmes` → `String(programmes.length).padStart(2, '0')` ("08"). The three pills read
-`subscribe.meta` ("Free", "Fortnightly", "No affiliate spam"). The intro `em` is italic
-`amber-bright`, matching the site's heading-accent rule.
+`subscribe.meta` ("Free", "Fortnightly", "No affiliate spam"). The intro `em` is italic in a deep amber-brown
+(`color-mix(in oklab, var(--color-amber) 35%, var(--color-ink))`) with a faint cream halo: the amber
+tokens sit mid-tone between the cloud tops and their shadows and lose contrast there (Qie, 2026-09-25;
+previously `amber-bright`).
 
 ## 7. Layers (photographs since 2026-09-25)
 
@@ -147,8 +149,9 @@ opening, wing placement) still holds for the photographic versions. Current file
 (2400×1350, "Summer above the clouds", CC0), `glow.webp` (the sun from "Sunset on plane", blurred,
 radial alpha), `horizon.webp` (2400×800, warm-tinted band from "Above the Clouds", alpha fade at the
 top), `window-left.webp` / `window-right.webp` (the surround ring filled with a desaturated,
-warm-toned Airbus A350 cabin photo, CC BY 4.0), `wing.webp` (2140×900, the wing from "Sunset on
-plane" cut by a traced polygon, bottom-anchored like the source's bridge) and `closeup.jpg`
+warm-toned hotel-bedroom photo, CC0; Qie chose it over the Airbus A350 cabin on 2026-09-25), `wing.webp` (2140×900, a generated wing image supplied by Qie on 2026-09-25,
+rotated 15° clockwise and placed so the root exits through the bottom edge, which keeps its cut
+hidden under the surround) and `closeup.jpg`
 (2160×1400, a resort suite, CC0). Qie's own photography replaces any of them by filename.
 
 ### 7.1 Original placeholder table
